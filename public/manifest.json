@@ -1,0 +1,25 @@
+{
+  "short_name": "Syntax",
+  "name": "Syntax — Next-Generation AI Intelligence Platform",
+  "description": "Executive-grade conversational AI and software engineering platform engineered by Adel Mohamed.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "48x48 72x72 96x96 128x128 256x256 512x512"
+    },
+    {
+      "src": "/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#131316",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "any",
+  "categories": ["utilities", "productivity", "developer tools"]
+}
+

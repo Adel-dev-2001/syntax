@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <defs>
+    <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="45%" stop-color="#6366f1" />
+      <stop offset="75%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="spark-core" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#c7d2fe" />
+    </linearGradient>
+  </defs>
+
+  <!-- Clean Star Icon (Zero Background Box, 100% Transparent) -->
+  <g transform="translate(4, 6)">
+    <path d="M24 2 C24 16 16 24 2 24 C16 24 24 32 24 46 C24 32 32 24 46 24 C32 24 24 16 24 2 Z" fill="url(#logo-grad)" />
+    <path d="M24 14 C24 20 20 24 14 24 C20 24 24 28 24 34 C24 28 28 24 34 24 C28 24 24 20 24 14 Z" fill="url(#spark-core)" opacity="0.9" />
+  </g>
+
+  <!-- Clean Minimalist Typography: Syntax Only (No AI) -->
+  <text x="62" y="38" font-family="'Inter', system-ui, sans-serif" font-weight="700" font-size="28" fill="currentColor" letter-spacing="-0.8">Syntax</text>
+</svg>

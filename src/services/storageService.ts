@@ -31,7 +31,7 @@ export const StorageService = {
           const cleanMessages = (s.messages || []).filter((m) => {
             if (!m || !m.content) return false;
             const content = m.content.toLowerCase();
-            // Purge ugly API errors from past runs so user is never embarrassed
+            // Omit transient API error responses from persisted session history
             if (m.error) return false;
             if (content.includes('gemini api error')) return false;
             if (content.includes('model gemini-1.5-flash unavailable')) return false;

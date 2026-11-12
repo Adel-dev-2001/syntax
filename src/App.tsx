@@ -108,7 +108,7 @@ export const App: React.FC = () => {
     setSettings(loadedSettings);
 
     const rawSessions = StorageService.getSessions();
-    // Filter out any sessions that had 0 messages (fixes Image 1 permanently)
+    // Exclude empty sessions that contain zero persisted messages
     const validSessions = rawSessions.filter((s) => s.messages && s.messages.length > 0);
     setSessions(validSessions);
     StorageService.saveSessions(validSessions);
@@ -286,7 +286,7 @@ export const App: React.FC = () => {
 
   // Click "+ New Chat"
   const handleNewSession = () => {
-    // If user is already on a fresh empty chat with 0 messages, do nothing!
+    // No-op if the user is already viewing an empty draft session
     if (!activeSessionId && currentDraftMessages.length === 0) {
       return;
     }
@@ -393,7 +393,7 @@ export const App: React.FC = () => {
     const isTabHidden = typeof document !== 'undefined' && document.hidden;
 
     // If the user is on another chat, or the browser is minimized / in another tab:
-    // Instantly commit the full text so background work completes immediately without throttling!
+    // Commit full text immediately when session is backgrounded to avoid timer throttling
     if (!isCurrentlyViewed || isTabHidden) {
       setSessions((prev) => {
         const target = prev.find((s) => s.id === targetSessionId);

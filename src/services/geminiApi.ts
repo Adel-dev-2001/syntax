@@ -177,7 +177,7 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
     return DEFAULT_FREE_MODELS;
   }
 
-  // 2. Sort by version descending (Newest generation first, future-proof for 100+ years)
+  // 2. Sort by version descending (Newest generation prioritized first)
   eligible.sort((a: any, b: any) => {
     const idA = (a.name || '').replace(/^models\//, '');
     const idB = (b.name || '').replace(/^models\//, '');
@@ -672,7 +672,7 @@ CORE TONE & CONVERSATIONAL RULES:
   };
 
   // Build ordered candidate models list:
-  // 1. User's actively selected model FIRST (so switching models in the UI is 100% real and respected!)
+  // 1. User's actively selected model first
   // 2. Live verified models from Google API discovery
   // 3. Official active free-tier fallback models
   const liveModels = getCachedAvailableModels();

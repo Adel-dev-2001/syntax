@@ -143,7 +143,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         let updatedSelectedModel = formData.selectedModel;
         if (result.models && result.models.length > 0) {
           setModelList(result.models);
-          // If the currently chosen model is not supported, automatically select the top newly discovered model!
+          // If the currently chosen model is not supported, automatically select the top discovered model
           if (!result.models.some((m) => m.id === formData.selectedModel)) {
             updatedSelectedModel = result.models[0].id;
           }

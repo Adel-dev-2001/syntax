@@ -174,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div className="p-3 pb-2">
             <div className="flex items-center justify-between px-1 mb-3 pt-1">
               <div className="flex items-center gap-2.5">
-                <img src="/favicon.svg" alt="Syntax" className="w-6 h-6 flex-shrink-0 drop-shadow-sm" />
+                <img src="./favicon.svg" alt="Syntax" className="w-6 h-6 flex-shrink-0 drop-shadow-sm" />
                 <span className="font-semibold text-sm tracking-tight text-zinc-900 dark:text-white">Syntax</span>
               </div>
 

@@ -71,7 +71,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           >
             {/* Logo shown by default */}
             <img
-              src="/favicon.svg"
+              src="./favicon.svg"
               alt="Syntax"
               className="w-6 h-6 transition-all duration-200 group-hover:opacity-0 group-hover:scale-75 absolute pointer-events-none drop-shadow-sm"
             />

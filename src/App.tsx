@@ -927,7 +927,7 @@ export const App: React.FC = () => {
               <div className="relative mb-3 group cursor-default">
                 <div className="absolute -inset-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-3xl blur-xl opacity-30 group-hover:opacity-60 transition duration-500 animate-pulse" />
                 <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-3xl bg-white/90 dark:bg-[#15161f]/90 backdrop-blur-xl border border-zinc-200/90 dark:border-white/10 shadow-2xl flex items-center justify-center p-4">
-                  <img src="/favicon.svg" alt="Syntax" className="w-11 h-11 drop-shadow-md transition-transform duration-300 group-hover:scale-110" />
+                  <img src="./favicon.svg" alt="Syntax" className="w-11 h-11 drop-shadow-md transition-transform duration-300 group-hover:scale-110" />
                 </div>
               </div>
 

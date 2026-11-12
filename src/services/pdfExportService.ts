@@ -238,7 +238,7 @@ export async function exportConversationToPdf(session: ChatSession): Promise<voi
 
     <div class="doc-title">${title}</div>
     <div class="meta-details">
-      <span><strong>Model:</strong> ${session.model || 'Gemini 3.8 Flash'}</span>
+      <span><strong>Model:</strong> ${session.model || 'Gemini 2.5 Flash'}</span>
       <span>•</span>
       <span><strong>Messages:</strong> ${session.messages.length}</span>
       <span>•</span>

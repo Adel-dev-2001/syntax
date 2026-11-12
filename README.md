@@ -1,215 +1,165 @@
 <div align="center">
 
-  <img src="public/favicon.svg" alt="Syntax Logo" width="110" />
+  <img src="public/favicon.svg" alt="Syntax Logo" width="96" />
 
-  # ⚡ SYNTAX
-  ### Next-Generation Conversational AI & Developer Intelligence Platform
+  # Syntax
+  ### Conversational AI & Developer Workspace
 
-  **An executive-grade, client-orchestrated AI interface engineered for modern software development, theoretical research, and algorithmic analysis.**  
-  *Engineered & Architected by **Adel Mohamed**.*
+  Built and maintained by [**Adel Mohamed**](https://github.com/Adel-dev-2001)
 
-  <br />
+  [![React](https://img.shields.io/badge/React-18.3-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![Google Gemini API](https://img.shields.io/badge/API-Google_Gemini-4285F4?style=flat-square&logo=google&logoColor=white)](https://aistudio.google.com/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-2ea44f?style=flat-square)](LICENSE)
 
-  [![React](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-  [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-  [![Google Gemini API](https://img.shields.io/badge/Google_Gemini-API_Orchestration-8E75C4?style=for-the-badge&logo=google&logoColor=white)](https://aistudio.google.com/)
-  [![Privacy](https://img.shields.io/badge/Privacy-Zero--Knowledge_Client--Side-emerald?style=for-the-badge&logo=shield)](https://github.com/Adel-dev-2001/syntax)
-  [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+  [**Live Application**](https://adel-dev-2001.github.io/syntax/) | [**Source Repository**](https://github.com/Adel-dev-2001/syntax)
 
 </div>
 
 ---
 
-## 📑 Table of Contents
+## Overview
 
-- [Executive Summary](#-executive-summary)
-- [Academic Context & Scholarship Committee Statement](#-academic-context--scholarship-committee-statement)
-- [Commercial & Enterprise Deployment Viability](#-commercial--enterprise-deployment-viability)
-- [Core Architectural Innovations](#-core-architectural-innovations)
-  - [1. Dynamic Model Discovery & Live API Orchestration](#1-dynamic-model-discovery--live-api-orchestration)
-  - [2. Multi-Tier Resilient Fallback Cascade](#2-multi-tier-resilient-fallback-cascade)
-  - [3. Isolated In-Browser Code Execution Sandbox](#3-isolated-in-browser-code-execution-sandbox)
-  - [4. Multi-Language High-Fidelity Vector PDF Engine](#4-multi-language-high-fidelity-vector-pdf-engine)
-  - [5. Zero-Knowledge Client-Side Data Architecture](#5-zero-knowledge-client-side-data-architecture)
-  - [6. Multi-Domain Specialized Intelligence Personas](#6-multi-domain-specialized-intelligence-personas)
-- [Security Architecture & Threat Modeling](#-security-architecture--threat-modeling)
-- [Search Engine Optimization (SEO) & Schema.org](#-search-engine-optimization-seo--schemaorg)
-- [Technical Stack & System Specifications](#-technical-stack--system-specifications)
-- [Project Directory Structure](#-project-directory-structure)
-- [Installation & Local Deployment Guide](#-installation--local-deployment-guide)
-- [Production Deployment Protocols](#-production-deployment-protocols)
-- [Creator & Academic Attribution](#-creator--academic-attribution)
-- [License](#-license)
+**Syntax** is a client-side web application designed for software development, algorithmic problem-solving, and technical research. It connects directly to Google's Gemini REST API from the browser, allowing users to interact with live language models, run HTML/Canvas/JavaScript code snippets inside an isolated sandbox, manage persistent conversation histories, and export discussions to printable vector PDF documents.
+
+The application runs entirely in the browser without an intermediate backend server. User settings, conversation logs, custom instructions, and API keys are stored locally in the browser's `localStorage` and are only transmitted directly to Google's official API endpoints over HTTPS.
 
 ---
 
-## 🏛️ Executive Summary
+## Academic & Learning Context Note
 
-**Syntax** is an autonomous, high-performance conversational intelligence and code execution platform. Developed by **Adel Mohamed**, the platform bridges cutting-edge Large Language Model (LLM) orchestration with client-side reactive web engineering.
-
-Unlike typical monolithic web wrappers that rely on expensive intermediate backend servers, Syntax operates on a **zero-overhead, client-orchestrated serverless topology**. It interfaces directly with Google Cloud's Gemini API endpoints using secure client-side communication channels, dynamic model version parsing, live token usage analytics, and local memory preservation.
-
-Syntax is engineered to satisfy two complementary standards:
-1. **Academic Rigor:** Serving as an advanced applied research capstone in distributed AI orchestration, algorithm optimization, and secure browser sandboxing.
-2. **Commercial Readiness:** Ready for direct white-label acquisition, enterprise SaaS deployment, or internal corporate software tooling.
-
----
-
-## 🎓 Academic Context & Scholarship Committee Statement
-
-> [!NOTE]
-> ### 📜 Statement for the Academic Evaluation Committee (Russian Government Scholarship / Rossotrudnichestvo / Open Doors)
+> **Note for Academic Reviewers and Evaluation Committees:**
 >
-> This software architecture was conceptualized, designed, and constructed by **Adel Mohamed** as part of an applied learning and research trajectory in modern Computer Science, Artificial Intelligence system orchestration, and reactive frontend software engineering.
+> This project was developed by **Adel Mohamed** as part of a self-directed learning journey in software engineering, modern frontend development, and practical AI integration. The primary educational goals of building Syntax were to gain hands-on experience in:
+> - Designing modular single-page applications with React and TypeScript.
+> - Authenticating and communicating with external REST APIs (Google Gemini API), handling asynchronous data streams, and managing rate limits and error states gracefully.
+> - Implementing client-side state persistence, browser security practices (such as sandboxed iframes and input sanitization), and technical documentation.
 >
-> **Pedagogical Objectives & Investigative Scope:**
-> - **Applied AI Orchestration:** Investigating client-side latency, token consumption patterns, and streaming protocols when interfacing with hyperscale LLM REST/gRPC interfaces.
-> - **Fault-Tolerant Dynamic Cascading:** Formulating deterministic fallback algorithms capable of mitigating HTTP 429 (rate-limit resource exhaustion), API deprecation, and unexpected upstream gateway timeouts without interrupting the user's conversational flow.
-> - **Browser-Level Sandboxing & Security Primitives:** Implementing zero-trust iframe virtualization with opaque origin isolation (`sandbox="allow-scripts allow-forms allow-modals"`) to allow untrusted generated JavaScript and Canvas graphics to execute securely without access to parent storage or network credentials.
-> - **Cross-Lingual Typography & Vectorization:** Solving complex bidirectional rendering challenges (RTL Arabic and LTR English/Russian) in high-resolution vector PDF export systems.
->
-> **Scholarly Transparency:**  
-> This platform embodies an active and rigorous learning journey in mastering modern software engineering methodologies, API lifecycle management, and reactive design patterns. While engineered to strict production-grade standards, the codebase reflects continuous iterative evolution. The author welcomes academic critique, peer review, and formal evaluation from faculty reviewers and scholarship juries as part of the candidate's pathway toward graduate research in Advanced Computer Science and Artificial Intelligence.
+> Because this application was built as an educational project while actively learning and experimenting with these technologies, certain architectural patterns or edge cases may still have room for further refinement and optimization. Constructive feedback and academic review are always welcome as part of this ongoing learning process.
 
 ---
 
-## 💼 Commercial & Enterprise Deployment Viability
+## Key Features
 
-Syntax is completely decoupled from recurring server infrastructure costs:
+### 1. Live Google Gemini API Connection & Dynamic Model Discovery
+- **Direct API Integration:** Communicates directly with `https://generativelanguage.googleapis.com/v1beta/models` using the user's Google AI Studio API key.
+- **Forward-Compatible Model Discovery:** Instead of relying only on static model names, Syntax queries the live models endpoint, parses version numbers dynamically (supporting current `2.x` and `3.x` series as well as future model releases), and filters strictly for conversational free-tier models (`flash` and `lite` families) while excluding non-text endpoints (such as image-only, audio, or embedding models).
+- **Live HTTP Verification:** When testing or syncing an API key, the system sends a lightweight verification request (`maxOutputTokens: 1`) to candidate models in parallel and keeps only the models that respond with an active status (`200 OK`).
+- **Real-Time Model Switching & Failover:** Users can switch between verified models directly from the top header bar or the Settings modal. If the active model hits a per-minute rate limit (`HTTP 429`) or becomes unavailable (`HTTP 404`), Syntax automatically falls back to the next verified working model and displays a status notification.
 
-- **Zero Operational Server Cost:** All state management, routing, API orchestration, and vector exports execute entirely in the user's browser runtime. Zero backend databases, zero caching clusters, and zero middleware proxies to maintain.
-- **Enterprise Data Privacy Compliance (GDPR & Zero-Knowledge):** User prompts, proprietary code snippets, conversation logs, and API credentials are kept strictly inside the user's browser `localStorage`. No user telemetry or conversation data is harvested or transmitted to third-party databases.
-- **Immediate White-Label Adaptability:** Modular styling powered by Tailwind CSS allows instant rebranding, logo replacement, or enterprise SSO integration.
-- **Commercial Code Quality:** Clean, modular TypeScript codebase adhering to strict type safety (`strict: true`), zero console bloat, human-written design aesthetics, and structured lifecycle cleanup.
+### 2. Interactive Code Block & Sandboxed Execution
+- **Code Formatting & Actions:** Renders fenced code blocks with language labels, line numbering support, one-click clipboard copy, and direct source file download.
+- **In-Browser Live Runner:** Detects runnable web code (HTML5, CSS, SVG, Canvas applications, and pure browser JavaScript) and provides an in-place toggle between the **Code** view and the **Live App / Output** view.
+- **Isolated Iframe Sandbox:** Interactive web previews execute inside a restricted iframe (`sandbox="allow-scripts allow-forms allow-modals"`) without `allow-same-origin`. This isolates the executed code in an opaque origin so it cannot access parent `localStorage`, cookies, or stored API keys.
+- **Execution Controls:** Includes pause/resume overlays for Canvas games, a restart button, execution timing metrics for JavaScript console outputs, an option to open the preview in a separate tab, and a fullscreen view with `Esc` key support.
 
----
+### 3. Conversation Management & Workflow Tools
+- **Multi-Session Architecture:** Create unlimited chat sessions, rename titles, pin important conversations to the top of the sidebar, or delete sessions via a confirmation dialog.
+- **Instant Search (`Ctrl + K`):** Filter saved conversations in real time by matching against both chat titles and message bodies.
+- **Concurrent Background Generation:** Start a new conversation or switch between existing chats while another session is actively waiting for or streaming a response in the background.
+- **Inline Prompt Editing:** Edit any previously sent user message in place to update the prompt and regenerate the assistant's response from that point in the conversation.
+- **Multimodal Image Attachments:** Attach one or more images (up to 10MB per image) to analyze screenshots, diagrams, or code snippets alongside text prompts.
 
-## ⚡ Core Architectural Innovations
+### 4. Custom Instructions, Memory & Domain Personas
+- **Custom System Instructions:** Configure persistent system-level behavior rules and user background details in the Settings modal.
+- **Memory Bank:** Add, edit, enable/disable, or delete specific personal notes and preferences that are appended to the model context across sessions.
+- **Built-In Personas:** Includes pre-configured system prompts for:
+  - *Syntax Algorithms & ICPC* (data structures, graph theory, and complexity analysis)
+  - *CS Academic Researcher* (research structuring, formal computer science theory, and academic writing)
+  - *Low-Level & Cloud Architect* (systems programming, concurrency, and backend architecture)
+  - *Russian-English CS Bridge* (bilingual technical terminology and academic translation)
 
-### 1. Dynamic Model Discovery & Live API Orchestration
-Syntax does not hardcode static AI model identifiers. Instead, it features an intelligent discovery engine:
-- Upon entering an API key, the system calls Google Cloud AI Studio's `/v1beta/models` endpoint.
-- Syntax's custom version parser (`parseAndRankFreeModels`) analyzes model taxonomy, filters strictly for chat-capable architectures, eliminates legacy deprecated versions, and ranks models in descending mathematical order (e.g. `Gemini 3.8 Flash`).
-- Syntax performs a real-time HTTP verification ping against candidate models to confirm active 200 OK operational status before isolating and promoting the working model with an **`Active & Verified`** badge.
+### 5. Vector PDF Export
+- **Selectable PDF Reports:** Exports any conversation directly to a formatted PDF document (`pdfExportService.ts`).
+- **Multilingual Typography:** Supports both Left-to-Right (English, Russian) and Right-to-Left (Arabic) text layout, preserving code blocks, timestamps, and conversation metadata.
 
-### 2. Multi-Tier Resilient Fallback Cascade
-To guarantee 100% uptime during academic jury demonstrations or mission-critical commercial tasks:
-- If a chosen model encounters upstream quota constraints (HTTP 429) or regional unavailability (HTTP 404/503), Syntax automatically cascades down its prioritized list of live models.
-- The UI transparently presents a subtle indicator displaying the active working model and notifying the user if a fallback transition occurred.
-- If all API keys or external quotas are completely exhausted, an intelligent fail-safe engine provides structured, scholarship-safe fallback guidance without crashing or freezing.
-
-### 3. Isolated In-Browser Code Execution Sandbox
-When an assistant response generates executable code:
-- **Interactive Web Applications:** Full HTML5, CSS3, and JavaScript snippets (including interactive games, algorithmic visualizations, and Canvas graphics) render in a dedicated preview tab.
-- **Zero-Trust Iframe Sandbox:** Executed inside an isolated iframe (`sandbox="allow-scripts allow-forms allow-modals"`). The opaque origin prevents the sandboxed script from reading parent `localStorage`, cookies, or API keys.
-- **Game Controls & Viewport:** Features an in-place code/preview switch, pause/resume pill overlay, execution timer, console logger interceptor, and a fullscreen mode with an `Escape` key exit handler.
-
-### 4. Multi-Language High-Fidelity Vector PDF Engine
-Syntax integrates an executive vector document export system:
-- **Selectable & Copyable Text:** Exports conversations directly into pristine, copyable vector PDF documents with accurate text metrics and clean pagination.
-- **Unicode Multi-Language Typography:** Comprehensive bidirectional typesetting supporting Arabic (Cairo font), English (Inter), and Russian Cyrillic script.
-- **Official Brand Watermarking:** Incorporates the official Syntax 4-point AI Star Spark SVG vector header, metadata summary cards, and syntax-highlighted code containers.
-
-### 5. Zero-Knowledge Client-Side Data Architecture
-- **Local Storage Management:** Chats, pinned conversations, custom system instructions, and memory facts are saved in the client's local browser storage.
-- **Corrupted Data Resiliency:** Storage parsing incorporates automatic sanitization, migrating legacy schemas and purging obsolete state entries gracefully.
-- **One-Click Total Purge:** Users can wipe all local storage, active memory items, and credentials with instant verification.
-
-### 6. Multi-Domain Specialized Intelligence Personas
-Syntax comes pre-equipped with targeted academic and professional system personas:
-1. **Syntax Algorithms & ICPC:** Dynamic programming, advanced graph theory (Tarjan, Dijkstra, Segment Trees), and rigorous asymptotic Big-O proofs.
-2. **CS Academic Researcher (Russian Scholarship / Graduate Level):** Academic literature review, research proposal structuring, High-Performance Computing, and formal mathematical foundations tailored for top Russian technical institutions (MIPT, HSE, ITMO, MSU).
-3. **Low-Level & Cloud Architect:** Linux kernel concurrency primitives, memory safety in C++20/Rust, cache locality, and low-latency microservice architectures.
-4. **Russian-English CS Bridge:** Bilingual translation and terminology alignment between Russian academic computational literature and international standards.
+### 6. System Alerts & Theme Support
+- **Real-Time Status Notifications:** Displays clear toast alerts for network disconnection/reconnection, API rate-limit exhaustion (`HTTP 429`), safety filter blocks, and automatic model failovers.
+- **Light & Dark Themes:** Initializes in light mode by default with an instant toggle to dark mode, backed by an inline script in `index.html` to prevent theme flickering on page load.
 
 ---
 
-## 🛡️ Security Architecture & Threat Modeling
+## Security & SEO Implementation
 
-| Threat Vector | Mitigation Strategy Implemented in Syntax |
-|---|---|
-| **API Key Theft** | Keys are stored strictly in client-side `localStorage` and dispatched exclusively to Google's official endpoint via the `X-goog-api-key` header. Zero proxy servers exist in the communication loop. |
-| **XSS via Sandboxed Code** | Sandboxed execution iframes explicitly exclude `allow-same-origin`, enforcing a `null` origin that blocks access to parent storage, tokens, and cookies. |
-| **Markdown Injection & Protocol Attacks** | Inline links are validated with strict regex requiring `http://` or `https://` schemes. Unsafe protocols (`javascript:`, `data:`) are rejected. All external links include `rel="noopener noreferrer"`. |
-| **Data Leakage & Telemetry** | Complete absence of third-party tracking scripts, analytics beacons, or server telemetry. |
+### Security Measures
+- **Local-Only Credential Storage:** API keys are stored in the user's browser `localStorage` (`syntax_ai_settings_v1`) and sent strictly to `generativelanguage.googleapis.com` via the `X-goog-api-key` request header.
+- **Sandbox Origin Isolation:** The code runner iframe omits `allow-same-origin` to prevent untrusted scripts from reading parent storage.
+- **Safe Markdown Link Parsing:** Inline markdown links (`[label](url)`) are validated to allow only `http://` and `https://` protocols, preventing `javascript:` or `data:` URI injection, and are rendered with `target="_blank" rel="noopener noreferrer"`.
 
----
-
-## 🔍 Search Engine Optimization (SEO) & Schema.org
-
-Syntax is optimized for global search engine discoverability and social media indexing:
-
-- **JSON-LD Schema.org Structured Data:** Valid `WebApplication` and `Person` schema providing structured metadata for Google Search Knowledge Panels.
-- **OpenGraph & Twitter Cards:** Complete `og:title`, `og:description`, `og:image`, and `twitter:card` tags for high-fidelity social previews on LinkedIn, Twitter, and GitHub.
-- **Crawler Directives:** Dedicated `robots.txt` configuration with `index, follow` directives and an XML `sitemap.xml`.
-- **Progressive Web App (PWA) Manifest:** Fully compliant `manifest.json` enabling mobile home screen installation and standalone web app operation.
+### SEO & Structured Data
+- **Metadata & Social Cards:** Configured in `index.html` with canonical URLs, meta descriptions, keywords, Open Graph (`og:*`) tags, and Twitter Card metadata.
+- **Schema.org JSON-LD:** Includes structured data graphs for `WebApplication` and `Person` (author attribution).
+- **Indexing Assets:** Includes `public/robots.txt`, `public/sitemap.xml`, and a Progressive Web App manifest (`public/manifest.json`) with relative asset paths for compatibility with both root domains and GitHub Pages subpaths.
 
 ---
 
-## 💻 Technical Stack & System Specifications
+## Technology Stack
 
-```
-Frontend Runtime:       React 18.3.1 (Concurrent Rendering)
-Language Standard:      TypeScript 5.7.2 (Strict Type Checking)
-Build & Bundling:       Vite 6.0.3 (Rollup Production Compiler)
-CSS Framework:          Tailwind CSS 3.4.16 (JIT Compiler, Custom Mesh Gradients)
-Vector PDF Engine:      jsPDF 4.2.1 (Custom Canvas & Unicode Layout Engine)
-Iconography:            Lucide React 0.468.0
-Visual Effects:         Canvas-Confetti 1.9.4
-Typography:             Inter, Outfit, Fira Code (Google Fonts CDN Preconnect)
-```
+| Layer | Technology |
+| :--- | :--- |
+| **UI Framework** | React 18.3 (Functional Components & Hooks) |
+| **Language** | TypeScript 5.7 |
+| **Build Tool** | Vite 6.0 |
+| **Styling** | Tailwind CSS 3.4 & PostCSS |
+| **Icons** | Lucide React |
+| **PDF Generation** | Custom HTML/Vector Print Engine & jsPDF |
+| **API Provider** | Google Gemini REST API (`v1beta`) |
 
 ---
 
-## 📁 Project Directory Structure
+## Project Structure
 
-```
-Syntax/
+```text
+syntax/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml                  # GitHub Actions workflow for GitHub Pages deployment
 ├── public/
-│   ├── favicon.svg             # Official 4-point AI Star Spark Favicon
-│   ├── logo.svg                # High-resolution vector brand logo
-│   ├── manifest.json           # Web App Manifest for PWA readiness
-│   ├── robots.txt              # Search engine crawler policies
-│   └── sitemap.xml             # XML sitemap for SEO indexation
+│   ├── favicon.svg                     # Application vector icon
+│   ├── logo.svg                        # Brand vector logo
+│   ├── manifest.json                   # Web App Manifest
+│   ├── robots.txt                      # Search crawler rules
+│   └── sitemap.xml                     # XML sitemap
 ├── src/
 │   ├── components/
-│   │   ├── ChatHeader.tsx      # Adaptive top navigation, model picker, theme switch
-│   │   ├── ChatInput.tsx       # Luxury oval command bar & attachment handler
-│   │   ├── ChatMessage.tsx     # Message bubble renderer, markdown parser, prompt edit
-│   │   ├── CodeBlock.tsx       # Syntax-highlighted code block & isolated sandbox runner
-│   │   ├── ConversationOptionsMenu.tsx # Pin, rename, PDF export, and delete menu
-│   │   ├── RenameModal.tsx     # Symmetrical dialog for renaming conversations
-│   │   ├── SettingsModal.tsx   # Two-column settings, API key test toolbar, memory bank
-│   │   ├── Sidebar.tsx         # Collapsible navigation, search, pinned group, mobile overlay
-│   │   └── ToastContainer.tsx  # Executive floating toast alerts (quota, network, status)
+│   │   ├── ChatHeader.tsx              # Top bar, live model selector, and theme toggle
+│   │   ├── ChatInput.tsx               # Auto-resizing prompt input and image attachment bar
+│   │   ├── ChatMessage.tsx             # Message renderer, markdown parser, and inline editor
+│   │   ├── CodeBlock.tsx               # Code viewer and sandboxed HTML/JS runner
+│   │   ├── ConversationOptionsMenu.tsx # Pin, rename, PDF export, and delete dropdown
+│   │   ├── RenameModal.tsx             # Modal dialog for renaming chat sessions
+│   │   ├── SettingsModal.tsx           # API key configuration, model tester, instructions, memory
+│   │   ├── Sidebar.tsx                 # Collapsible session list, search bar, and delete modal
+│   │   └── ToastContainer.tsx          # Notification toasts for network and API events
 │   ├── data/
-│   │   └── personas.ts         # ICPC, Academic Scholarship, and Architecture personas
+│   │   └── personas.ts                 # Pre-defined system personas and sample prompts
 │   ├── services/
-│   │   ├── geminiApi.ts        # Google Cloud API client, dynamic ranker & model cascade
-│   │   ├── pdfExportService.ts # Vector PDF generation with Unicode Arabic/English support
-│   │   └── storageService.ts   # Resilient localStorage persistence & session migration
+│   │   ├── geminiApi.ts                # Google Gemini API client, model ranker, and live verifier
+│   │   ├── pdfExportService.ts         # Multi-language vector PDF export service
+│   │   └── storageService.ts           # localStorage wrapper and state migration logic
 │   ├── types/
-│   │   └── chat.ts             # Domain models (ChatMessage, ChatSession, AppSettings)
-│   ├── App.tsx                 # Core application controller & multi-chat manager
-│   ├── index.css               # Ambient mesh gradients, halo lighting, scrollbar styling
-│   └── main.tsx                # React DOM entry point
-├── index.html                  # SEO metadata, OpenGraph, JSON-LD Schema.org, fonts
-├── package.json                # Dependencies, project metadata & build scripts
-├── postcss.config.js           # PostCSS Tailwind plugins
-├── tailwind.config.js          # Extended theme colors, typography, border radiuses
-├── tsconfig.json               # TypeScript compiler rules
-└── vite.config.ts              # Vite bundling optimization & build targets
+│   │   └── chat.ts                     # TypeScript interfaces for messages, sessions, and settings
+│   ├── App.tsx                         # Main application state and session controller
+│   ├── index.css                       # Global styles and Tailwind imports
+│   └── main.tsx                        # React application entry point
+├── index.html                          # HTML shell, SEO meta tags, and JSON-LD schema
+├── LICENSE                             # MIT License
+├── package.json                        # Scripts and dependencies
+├── postcss.config.js                   # PostCSS configuration
+├── tailwind.config.js                  # Tailwind CSS configuration
+├── tsconfig.json                       # TypeScript compiler configuration
+└── vite.config.ts                      # Vite build configuration (relative base path)
 ```
 
 ---
 
-## 🚀 Installation & Local Deployment Guide
+## Getting Started Locally
 
 ### Prerequisites
-- **Node.js:** v18.0.0 or higher
-- **npm:** v9.0.0 or higher (or pnpm / yarn)
+- **Node.js** (v18.0.0 or newer)
+- **npm** (v9.0.0 or newer)
 
 ### 1. Clone the Repository
 ```bash
@@ -222,64 +172,37 @@ cd syntax
 npm install
 ```
 
-### 3. Launch Development Server
+### 3. Start the Development Server
 ```bash
 npm run dev
 ```
-The application will be live at `http://localhost:5173` (or the next available port).
+Open `http://localhost:5173` in your browser.
 
-### 4. Build Production Bundle
+### 4. Build for Production
 ```bash
 npm run build
 ```
-The compiled, minified, and tree-shaken static assets will be generated in the `dist/` directory.
-
-### 5. Preview Production Build Locally
-```bash
-npm run preview
-```
+The production-ready static files will be generated in the `dist/` directory.
 
 ---
 
-## 🌐 Production Deployment Protocols
+## Configuring a Google Gemini API Key
 
-Syntax compiles to **100% static HTML, CSS, and JavaScript**. It can be deployed instantly to any global CDN edge network:
-
-### Vercel / Netlify / Cloudflare Pages
-- **Build Command:** `npm run build`
-- **Output Directory:** `dist`
-- **Install Command:** `npm install`
-
-### Docker Containerization (Nginx Alpine)
-```dockerfile
-# Multi-stage build
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey) and create a free API key.
+2. Open **Syntax** and click **Settings** in the bottom-left corner of the sidebar.
+3. Paste your key into the **Google Gemini API Key** field and click **Test Key**.
+4. Syntax will verify the key against Google's servers, discover the active free-tier models available for your account, and save your configuration locally.
 
 ---
 
-## 👤 Creator & Academic Attribution
+## Author
 
-**Syntax** was designed, architected, and engineered by:
-
-- **Lead Engineer & Architect:** [**Adel Mohamed**](https://github.com/Adel-dev-2001) (`@Adel-dev-2001`)
-- **GitHub Profile:** [https://github.com/Adel-dev-2001](https://github.com/Adel-dev-2001)
-- **Official Repository:** [https://github.com/Adel-dev-2001/syntax](https://github.com/Adel-dev-2001/syntax)
-- **Specialization:** Advanced Software Engineering, Full-Stack Architecture, Applied AI Orchestration
-- **Application Scope:** Candidate for the Russian Government Scholarship (Rossotrudnichestvo / Open Doors Master's & Doctoral Programs in Computer Science)
+- **Adel Mohamed**
+- **GitHub:** [@Adel-dev-2001](https://github.com/Adel-dev-2001)
+- **Repository:** [github.com/Adel-dev-2001/syntax](https://github.com/Adel-dev-2001/syntax)
 
 ---
 
-## 📄 License
+## License
 
-This project is open-source software licensed under the **[MIT License](LICENSE)**. Free for commercial, personal, and academic use.
+This project is licensed under the [MIT License](LICENSE).

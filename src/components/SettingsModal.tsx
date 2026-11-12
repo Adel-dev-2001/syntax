@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { AppSettings, MemoryItem } from '../types/chat';
 import {
+  DISCOVERED_MODELS_KEY,
   getCachedAvailableModels,
   testGeminiConnection
 } from '../services/geminiApi';
@@ -87,7 +88,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       const targetModel =
         settings.selectedModel && currentList.some((m) => m.id === settings.selectedModel)
           ? settings.selectedModel
-          : currentList[0]?.id || 'gemini-3.8-flash';
+          : currentList[0]?.id || 'gemini-2.5-flash';
 
       setFormData({
         ...settings,
@@ -114,7 +115,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleClearKey = () => {
     try {
-      localStorage.removeItem('syntax_live_free_models_v2');
+      localStorage.removeItem(DISCOVERED_MODELS_KEY);
     } catch (e) {}
     setModelList([]);
     setFormData((prev) => ({ ...prev, apiKey: '' }));
@@ -515,7 +516,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     >
                       {modelList.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.name} — {m.badge}
+                          {m.name} - {m.badge}
                         </option>
                       ))}
                     </select>

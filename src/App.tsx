@@ -13,7 +13,8 @@ import {
   getCachedAvailableModels,
   fetchLiveAvailableModels,
   syncLiveModelsWithGoogle,
-  generateScholarshipSafeResponse
+  generateScholarshipSafeResponse,
+  isForbiddenOrObsoleteModel
 } from './services/geminiApi';
 import { PERSONAS } from './data/personas';
 import {
@@ -94,13 +95,14 @@ export const App: React.FC = () => {
     const loadedSettings = StorageService.getSettings();
     const cachedModels = getCachedAvailableModels();
     
-    // Model assignment: sanitize obsolete models (1.5, 2.5) to active free tier (gemini-3.8-flash)
+    // Model assignment: sanitize obsolete or non-chat models to active free tier
     if (
       !loadedSettings.selectedModel ||
-      loadedSettings.selectedModel.includes('1.5') ||
-      loadedSettings.selectedModel.includes('2.5')
+      loadedSettings.selectedModel === 'gemini-3.8-flash' ||
+      loadedSettings.selectedModel === 'Syntax Onboard Engine' ||
+      isForbiddenOrObsoleteModel(loadedSettings.selectedModel)
     ) {
-      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-3.8-flash';
+      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-2.5-flash';
       StorageService.saveSettings(loadedSettings);
     }
     setSettings(loadedSettings);
@@ -145,6 +147,8 @@ export const App: React.FC = () => {
     selectedModelRef.current = settings.selectedModel;
   }, [settings.selectedModel]);
 
+  const hasSyncedLiveOnceRef = useRef(false);
+
   // Continuous Live Synchronization Engine with Google AI Studio:
   // Detects new Google models, sunset/deprecated models, or auto-switches deprecated active model.
   const runLiveSync = async () => {
@@ -160,7 +164,21 @@ export const App: React.FC = () => {
 
       setAvailableModels(sync.updatedModels);
 
-      // 1. Notify user of brand-new Google model releases
+      // On first sync, align selectedModel to verified live models silently without diff toasts against defaults
+      if (!hasSyncedLiveOnceRef.current) {
+        hasSyncedLiveOnceRef.current = true;
+        if (sync.fallbackModelNeeded) {
+          const fallback = sync.fallbackModelNeeded;
+          setSettings((prev) => {
+            const updated = { ...prev, selectedModel: fallback.id };
+            StorageService.saveSettings(updated);
+            return updated;
+          });
+        }
+        return;
+      }
+
+      // 1. Notify user of brand-new Google model releases during active session
       if (sync.newModelsDetected && sync.newModelsDetected.length > 0) {
         sync.newModelsDetected.forEach((m) => {
           addToast(
@@ -171,7 +189,7 @@ export const App: React.FC = () => {
         });
       }
 
-      // 2. Notify user if Google sunset/removed a model
+      // 2. Notify user if Google sunset/removed a model during active session
       if (sync.deletedModelsDetected && sync.deletedModelsDetected.length > 0) {
         sync.deletedModelsDetected.forEach((m) => {
           addToast(
@@ -580,7 +598,11 @@ export const App: React.FC = () => {
         }
 
         // Keep active model in sync if seamless failover took place
-        if (response.modelUsed && response.modelUsed !== settings.selectedModel) {
+        if (
+          response.modelUsed &&
+          response.modelUsed !== settings.selectedModel &&
+          response.modelUsed !== 'Syntax Onboard Engine'
+        ) {
           setSettings((prev) => {
             const updated = { ...prev, selectedModel: response.modelUsed! };
             StorageService.saveSettings(updated);
@@ -605,17 +627,20 @@ export const App: React.FC = () => {
           response.estimatedTokens
         );
       } catch (err: any) {
+        if (err?.message) {
+          addToast('warning', 'API Connection Notice', err.message);
+        }
         setThinkingSessionIds((prev) => {
           const copy = { ...prev };
           delete copy[activeTargetId];
           return copy;
         });
-        const fallbackText = generateScholarshipSafeResponse(text, settings.selectedModel || 'gemini-3.8-flash');
+        const fallbackText = generateScholarshipSafeResponse(text, settings.selectedModel || 'gemini-2.5-flash');
         await streamMessageToSession(
           activeTargetId,
           newMessagesList,
           fallbackText,
-          settings.selectedModel || 'gemini-3.8-flash',
+          settings.selectedModel || 'gemini-2.5-flash',
           85,
           Math.round(fallbackText.length / 4)
         );
@@ -726,7 +751,11 @@ export const App: React.FC = () => {
       }
 
       // Keep active model in sync if seamless failover took place
-      if (response.modelUsed && response.modelUsed !== settings.selectedModel) {
+      if (
+        response.modelUsed &&
+        response.modelUsed !== settings.selectedModel &&
+        response.modelUsed !== 'Syntax Onboard Engine'
+      ) {
         setSettings((prev) => {
           const updated = { ...prev, selectedModel: response.modelUsed! };
           StorageService.saveSettings(updated);
@@ -755,18 +784,21 @@ export const App: React.FC = () => {
         );
       }
     } catch (err: any) {
+      if (err?.message) {
+        addToast('warning', 'API Connection Notice', err.message);
+      }
       if (targetSessionId) {
         setThinkingSessionIds((prev) => {
           const copy = { ...prev };
           delete copy[targetSessionId!];
           return copy;
         });
-        const fallbackText = generateScholarshipSafeResponse(newContent, settings.selectedModel || 'gemini-3.8-flash');
+        const fallbackText = generateScholarshipSafeResponse(newContent, settings.selectedModel || 'gemini-2.5-flash');
         await streamMessageToSession(
           targetSessionId,
           newMessagesList,
           fallbackText,
-          settings.selectedModel || 'gemini-3.8-flash',
+          settings.selectedModel || 'gemini-2.5-flash',
           80,
           Math.round(fallbackText.length / 4)
         );

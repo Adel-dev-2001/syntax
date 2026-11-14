@@ -20,6 +20,7 @@ import { AppSettings, MemoryItem } from '../types/chat';
 import {
   DISCOVERED_MODELS_KEY,
   getCachedAvailableModels,
+  sanitizeApiKey,
   testGeminiConnection
 } from '../services/geminiApi';
 
@@ -123,7 +124,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // Live test API Key & Auto-Discover Latest Free Models
   const handleTestApiKey = async () => {
-    const key = formData.apiKey.trim();
+    const key = sanitizeApiKey(formData.apiKey);
     if (!key) {
       setTestStatus('error');
       setTestMessage('Please enter your Google Gemini API key first.');
@@ -141,7 +142,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         if (result.models && result.models.length > 0) {
           setModelList(result.models);
           updatedSelectedModel = result.models[0].id;
-          setFormData((prev) => ({ ...prev, selectedModel: updatedSelectedModel }));
+          setFormData((prev) => ({ ...prev, apiKey: key, selectedModel: updatedSelectedModel }));
         }
         setTestStatus('success');
         setTestMessage(result.message);
@@ -218,7 +219,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleSave = () => {
-    onSave(formData);
+    onSave({
+      ...formData,
+      apiKey: sanitizeApiKey(formData.apiKey),
+    });
     onClose();
   };
 

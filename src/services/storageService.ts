@@ -1,6 +1,6 @@
 import { AppSettings, ChatSession } from '../types/chat';
 import { exportConversationToPdf } from './pdfExportService';
-import { isForbiddenOrObsoleteModel } from './geminiApi';
+import { isForbiddenOrObsoleteModel, sanitizeApiKey } from './geminiApi';
 
 const SESSIONS_KEY = 'syntax_ai_sessions_v1';
 const ACTIVE_SESSION_KEY = 'syntax_ai_active_session_id';
@@ -87,13 +87,14 @@ export const StorageService = {
       const data = localStorage.getItem(SETTINGS_KEY);
       if (!data) return DEFAULT_SETTINGS;
       const parsed = JSON.parse(data);
+      const cleanKey = sanitizeApiKey(parsed.apiKey);
       let model = parsed.selectedModel || 'gemini-4-hydrogen';
       if (!model || model === 'gemini-2.5-flash' || isForbiddenOrObsoleteModel(model)) {
         model = 'gemini-4-hydrogen';
       }
-      if (parsed.selectedModel !== model) {
+      if (parsed.selectedModel !== model || parsed.apiKey !== cleanKey) {
         try {
-          localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...parsed, selectedModel: model }));
+          localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...parsed, apiKey: cleanKey, selectedModel: model }));
         } catch (e) {}
       }
       // Automatically purge pre-seeded default memories so user starts with a clean slate
@@ -103,6 +104,7 @@ export const StorageService = {
       return {
         ...DEFAULT_SETTINGS,
         ...parsed,
+        apiKey: cleanKey,
         selectedModel: model,
         theme: parsed.theme || 'light',
         memoryItems: cleanMemories,
@@ -114,7 +116,11 @@ export const StorageService = {
 
   saveSettings(settings: AppSettings): void {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      const cleaned = {
+        ...settings,
+        apiKey: sanitizeApiKey(settings.apiKey),
+      };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(cleaned));
     } catch (e) {
       console.error('Failed to save settings:', e);
     }

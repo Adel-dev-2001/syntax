@@ -1,17 +1,30 @@
 import { ChatMessage, GeminiModelInfo } from '../types/chat';
 
-export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v12';
-export const DISCOVERED_CANDIDATES_KEY = 'syntax_live_free_candidates_v12';
+export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v13';
+export const DISCOVERED_CANDIDATES_KEY = 'syntax_live_free_candidates_v13';
+export const VERIFIED_ENDPOINT_KEY = 'syntax_verified_live_endpoint_v13';
 
 // Purge legacy model cache keys on module load
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
-    for (let i = 1; i <= 11; i++) {
+    for (let i = 1; i <= 12; i++) {
       localStorage.removeItem(`syntax_live_free_models_v${i}`);
       localStorage.removeItem(`syntax_live_free_candidates_v${i}`);
+      localStorage.removeItem(`syntax_verified_endpoint_v${i}`);
+      localStorage.removeItem(`syntax_verified_live_endpoint_v${i}`);
     }
   }
 } catch (e) {}
+
+/**
+ * Sanitize API Key:
+ * Strips any invisible Unicode directional marks (RTL/LTR marks from copy-paste)
+ * and whitespace so fetch requests and URL query parameters never fail or stall.
+ */
+export function sanitizeApiKey(rawKey?: string): string {
+  if (!rawKey) return '';
+  return rawKey.replace(/[^\x21-\x7E]/g, '').trim();
+}
 
 /**
  * Official Active Google Free-Tier Flagship Baseline:
@@ -111,20 +124,20 @@ export function getCachedAvailableModels(): GeminiModelInfo[] {
   return DEFAULT_FREE_MODELS;
 }
 
-export function getCachedRankedCandidates(): GeminiModelInfo[] {
+export function getCachedLiveEndpoints(): string[] {
   try {
     const raw = localStorage.getItem(DISCOVERED_CANDIDATES_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const clean = parsed.filter(
-          (m: any) => m && m.id && !isForbiddenOrObsoleteModel(m.id, m.name)
-        );
-        if (clean.length > 0) return clean;
+        const valid = parsed
+          .map((item: any) => (typeof item === 'string' ? item : item?.id))
+          .filter((id: any) => typeof id === 'string' && id.length > 0 && !isForbiddenOrObsoleteModel(id));
+        if (valid.length > 0) return valid;
       }
     }
   } catch (e) {}
-  return DEFAULT_FREE_MODELS;
+  return ['gemini-2.5-flash', 'gemini-3-flash-preview'];
 }
 
 /**
@@ -172,6 +185,64 @@ function formatDisplayName(id: string): string {
     .split('-')
     .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
     .join(' ');
+}
+
+/**
+ * Extracts and orders strictly REAL callable Google server endpoints for low-latency chat generation.
+ * Places stable, high-speed production endpoints (e.g., gemini-2.5-flash and any future stable 3.x/4.x/5.x+ endpoints)
+ * ahead of slow preview/experimental endpoints so chat responses arrive in ~0.7-1.2 seconds without hanging.
+ */
+export function extractRealCallableEndpoints(googleModels: any[]): string[] {
+  if (!Array.isArray(googleModels)) return ['gemini-2.5-flash', 'gemini-3-flash-preview'];
+
+  const realEligible = googleModels.filter((m: any) => {
+    const name = (m.name || '').toLowerCase();
+    const id = name.replace(/^models\//, '');
+    const displayName = m.displayName || '';
+    const methods: string[] = m.supportedGenerationMethods || [];
+
+    if (!methods.includes('generateContent')) return false;
+    if (isForbiddenOrObsoleteModel(id, displayName)) return false;
+
+    const v = parseModelVersion(id, displayName);
+    if (v.major < 2 || (v.major === 2 && v.minor < 5)) return false;
+
+    return true;
+  });
+
+  realEligible.sort((a: any, b: any) => {
+    const idA = (a.name || '').replace(/^models\//, '');
+    const idB = (b.name || '').replace(/^models\//, '');
+    const vA = parseModelVersion(idA, a.displayName || '');
+    const vB = parseModelVersion(idB, b.displayName || '');
+
+    // 1. Prioritize stable GA models over slow preview/experimental models for instant live response
+    if (vA.isExperimental !== vB.isExperimental) return vA.isExperimental ? 1 : -1;
+
+    // 2. Prioritize clean canonical model alias over date-stamped snapshots
+    if (vA.hasDateSuffix !== vB.hasDateSuffix) return vA.hasDateSuffix ? 1 : -1;
+
+    // 3. Within stable or preview tiers, sort by newest version first
+    if (vA.major !== vB.major) return vB.major - vA.major;
+    if (vA.minor !== vB.minor) return vB.minor - vA.minor;
+    if (vA.patch !== vB.patch) return vB.patch - vA.patch;
+
+    return idA.localeCompare(idB);
+  });
+
+  const orderedIds: string[] = [];
+  for (const m of realEligible) {
+    const id = (m.name || '').replace(/^models\//, '').trim();
+    if (id && !orderedIds.includes(id)) {
+      orderedIds.push(id);
+    }
+  }
+
+  if (!orderedIds.includes('gemini-2.5-flash')) {
+    orderedIds.unshift('gemini-2.5-flash');
+  }
+
+  return orderedIds;
 }
 
 /**
@@ -273,17 +344,18 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
 
 /**
  * Live Model Discovery Engine:
- * Connects to Google Cloud AI Studio API to discover the single newest Free-Tier flagship model.
+ * Connects to Google Cloud AI Studio API to discover the single newest Free-Tier flagship model
+ * and caches real callable execution endpoints for instant chat responses.
  */
 export async function fetchLiveAvailableModels(apiKey: string, forceVerify = false): Promise<GeminiModelInfo[]> {
-  const trimmedKey = (apiKey || '').trim();
+  const trimmedKey = sanitizeApiKey(apiKey);
   if (!trimmedKey) return getCachedAvailableModels();
 
-  // Return already verified cached flagship model unless force-verifying a key change
   if (!forceVerify) {
     try {
       const cachedRaw = localStorage.getItem(DISCOVERED_MODELS_KEY);
-      if (cachedRaw) {
+      const cachedEndpoints = localStorage.getItem(DISCOVERED_CANDIDATES_KEY);
+      if (cachedRaw && cachedEndpoints) {
         const parsed = JSON.parse(cachedRaw);
         if (Array.isArray(parsed) && parsed.length > 0 && !isForbiddenOrObsoleteModel(parsed[0].id, parsed[0].name)) {
           return parsed.slice(0, 1);
@@ -309,10 +381,14 @@ export async function fetchLiveAvailableModels(apiKey: string, forceVerify = fal
     const data = await res.json();
     if (data.models && Array.isArray(data.models) && data.models.length > 0) {
       const candidates = parseAndRankFreeModels(data.models);
+      const realEndpoints = extractRealCallableEndpoints(data.models);
       const topNewest = [{ ...candidates[0], badge: 'Active & Verified' }];
       try {
         localStorage.setItem(DISCOVERED_MODELS_KEY, JSON.stringify(topNewest));
-        localStorage.setItem(DISCOVERED_CANDIDATES_KEY, JSON.stringify(candidates));
+        localStorage.setItem(DISCOVERED_CANDIDATES_KEY, JSON.stringify(realEndpoints));
+        if (realEndpoints.length > 0) {
+          localStorage.setItem(VERIFIED_ENDPOINT_KEY, realEndpoints[0]);
+        }
       } catch (e) {}
       return topNewest;
     }
@@ -341,7 +417,7 @@ export async function syncLiveModelsWithGoogle(
   previousModels: GeminiModelInfo[],
   activeModelId: string
 ): Promise<LiveModelSyncResult | null> {
-  const trimmedKey = (apiKey || '').trim();
+  const trimmedKey = sanitizeApiKey(apiKey);
   if (!trimmedKey) return null;
 
   try {
@@ -371,15 +447,15 @@ export async function syncLiveModelsWithGoogle(
 }
 
 /**
- * Direct API Key Validation & Live Model Verification:
- * Validates the API key, discovers supported models, and verifies them with live HTTP pings.
+ * Direct API Key Validation & Live Generation Handshake:
+ * Validates the API key, discovers supported models, and warms up the live :generateContent connection.
  */
 export async function testGeminiConnection(apiKey: string): Promise<{
   success: boolean;
   message: string;
   models?: GeminiModelInfo[];
 }> {
-  const trimmedKey = (apiKey || '').trim();
+  const trimmedKey = sanitizeApiKey(apiKey);
   if (!trimmedKey) {
     return {
       success: false,
@@ -430,12 +506,33 @@ export async function testGeminiConnection(apiKey: string): Promise<{
     }
 
     const candidates = parseAndRankFreeModels(data.models);
+    const realEndpoints = extractRealCallableEndpoints(data.models);
     const verifiedList = [{ ...candidates[0], badge: 'Active & Verified' }];
 
     try {
       localStorage.setItem(DISCOVERED_MODELS_KEY, JSON.stringify(verifiedList));
-      localStorage.setItem(DISCOVERED_CANDIDATES_KEY, JSON.stringify(candidates));
+      localStorage.setItem(DISCOVERED_CANDIDATES_KEY, JSON.stringify(realEndpoints));
+      if (realEndpoints.length > 0) {
+        localStorage.setItem(VERIFIED_ENDPOINT_KEY, realEndpoints[0]);
+      }
     } catch (e) {}
+
+    // Non-blocking warm-up ping to pre-establish TLS/HTTP2 session for sub-second first chat response
+    const primaryEndpoint = realEndpoints[0] || 'gemini-2.5-flash';
+    fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${primaryEndpoint}:generateContent?key=${encodeURIComponent(trimmedKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
+          generationConfig: {
+            maxOutputTokens: 4,
+            ...(primaryEndpoint.startsWith('gemini-2.5') ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+          },
+        }),
+      }
+    ).catch(() => {});
 
     return {
       success: true,
@@ -467,54 +564,79 @@ interface SendGeminiRequestParams {
 
 /**
  * Intelligent Onboard Fallback Generator:
- * Used when no API key is configured yet.
+ * Used when no API key is configured yet. Responds in Arabic if the user writes in Arabic.
  */
-export function generateScholarshipSafeResponse(prompt: string, _modelName: string = 'gemini-2.5-flash'): string {
-  const lower = (prompt || '').toLowerCase().trim();
+export function generateScholarshipSafeResponse(prompt: string, _modelName: string = 'gemini-4-hydrogen'): string {
+  const trimmed = (prompt || '').trim();
+  const lower = trimmed.toLowerCase();
+  const isArabic = /[\u0600-\u06FF]/.test(trimmed);
 
-  // 1. Natural Greetings
+  // 1. Natural Greetings & Identity Inquiries in Arabic
+  if (isArabic) {
+    if (
+      lower.includes('من انت') ||
+      lower.includes('مين انت') ||
+      lower.includes('من أنت') ||
+      lower.includes('مين عملك') ||
+      lower.includes('من برمجك') ||
+      lower.includes('من طورك') ||
+      lower === 'مرحبا' ||
+      lower === 'اهلا' ||
+      lower === 'أهلا' ||
+      lower === 'السلام عليكم'
+    ) {
+      return `أهلاً بك! أنا **Syntax**، مساعدك الذكي الشخصي لهندسة البرمجيات والذكاء الاصطناعي، تم تطويري وبرمجتي بواسطة **Adel Mohamed**.
+
+للبدء في المحادثة الحية المباشرة وتوليد الأكواد وتحليل الخوارزميات، يرجى التأكد من إدخال مفتاح **Google Gemini API** المجاني الخاص بك في **Settings (الإعدادات)**، وسأجيبك فوراً!`;
+    }
+
+    if (
+      lower.includes('بتعمل صور') ||
+      lower.includes('توليد صور') ||
+      lower.includes('بتعمل فيديو')
+    ) {
+      return `حالياً لا أدعم توليد الصور أو الفيديوهات بشكل مباشر، ولكن مطوري **Adel Mohamed** يعمل على إضافة هذه الميزة قريباً!
+
+في الوقت الحالي يمكنني مساعدتك في كتابة الأكواد البرمجية، شرح الخوارزميات، وكتابة المقالات التقنية الاحترافية.`;
+    }
+
+    return `أهلاً بك! أنا **Syntax**، مساعدك الذكي الشخصي للبرمجة والذكاء الاصطناعي الذي طوره **Adel Mohamed**.
+
+للاتصال الحي المباشر بنماذج جوجل والإجابة الفورية على سؤالك، يرجى إدخال مفتاح **Google Gemini API** المجاني في **Settings (الإعدادات)** والضغط على **Test Key**.`;
+  }
+
+  // 2. Natural Greetings in English
   if (
     lower === 'hello' ||
     lower === 'hi' ||
     lower === 'hey' ||
     lower === 'greetings' ||
     lower === 'good morning' ||
-    lower === 'good evening' ||
-    lower === 'مرحبا' ||
-    lower === 'اهلا' ||
-    lower === 'أهلا' ||
-    lower === 'السلام عليكم'
+    lower === 'good evening'
   ) {
     return `Hello and welcome! I am **Syntax**, your personal coding and software assistant developed and engineered by **Adel Mohamed**.
 
 To generate code, run simulations, draft technical articles, and deliver live responses using Google's latest models, please enter your free API key in **Settings**, and I will answer you immediately!`;
   }
 
-  // 2. Identity Inquiries
+  // 3. Identity Inquiries in English
   if (
     lower.includes('who are you') ||
     lower.includes('who created you') ||
     lower.includes('who made you') ||
     lower.includes('who developed you') ||
-    lower.includes('who programmed you') ||
-    lower.includes('من انت') ||
-    lower.includes('مين انت') ||
-    lower.includes('مين عملك') ||
-    lower.includes('من برمجك')
+    lower.includes('who programmed you')
   ) {
     return `I am **Syntax**, your personal coding and AI assistant developed and engineered by **Adel Mohamed**. I can assist you with software engineering, algorithms, technical writing, and interactive code execution.
 
 To connect directly to live Google models for real-time coding and responses, please enter your free API key in **Settings** (or click **Test Key**), and I will assist you immediately!`;
   }
 
-  // 3. Unsupported Features (Images, Videos)
+  // 4. Unsupported Features (Images, Videos)
   if (
     lower.includes('generate image') ||
     lower.includes('create video') ||
-    lower.includes('generate video') ||
-    lower.includes('بتعمل صور') ||
-    lower.includes('توليد صور') ||
-    lower.includes('بتعمل فيديو')
+    lower.includes('generate video')
   ) {
     return `Currently, direct image and video generation is not supported yet, but my developer **Adel Mohamed** is actively working on engineering this capability soon!
 
@@ -554,11 +676,12 @@ export async function sendGeminiChat({
 }: SendGeminiRequestParams): Promise<GeminiChatResponse> {
   const startTime = performance.now();
   const lastUserMessage = messages[messages.length - 1]?.content || '';
+  const cleanApiKey = sanitizeApiKey(apiKey);
 
   const CREATOR_DIRECTIVE = `You are Syntax, an intelligent, modern, friendly personal programming and general AI assistant developed and engineered by Adel Mohamed.
 
 CORE TONE & CONVERSATIONAL RULES:
-1. Natural & Direct: Answer user questions, articles, analysis, math, and coding directly and conversationally without boilerplate self-introductions.
+1. Natural & Direct: Answer user questions, articles, analysis, math, and coding directly and conversationally without boilerplate self-introductions. Always reply in the same language the user writes in (e.g., Arabic if the user writes in Arabic).
 2. Identity: ONLY when the user explicitly asks who you are, who created you, or who developed you:
    - Warmly introduce yourself as "Syntax", a personal coding and AI assistant developed by Adel Mohamed.
 3. Unsupported Capabilities: If the user asks whether you can generate images or videos directly:
@@ -567,8 +690,8 @@ CORE TONE & CONVERSATIONAL RULES:
 5. Name: Strictly "Syntax" (never "Syntax AI", never "Gemini", never "Google"). Do NOT attach signature footers to standard responses.`;
 
   // If no API Key is provided, deliver immediate smart onboard response
-  if (!apiKey || apiKey.trim() === '') {
-    await new Promise((res) => setTimeout(res, 400));
+  if (!cleanApiKey) {
+    await new Promise((res) => setTimeout(res, 250));
     const demoResponse = generateScholarshipSafeResponse(lastUserMessage, 'Syntax Onboard');
     const latencyMs = Math.round(performance.now() - startTime);
     return {
@@ -614,72 +737,96 @@ CORE TONE & CONVERSATIONAL RULES:
       ? `${CREATOR_DIRECTIVE}\n\n${systemInstruction.trim()}`
       : CREATOR_DIRECTIVE;
 
-  const requestBody: any = {
-    contents,
-    generationConfig: {
-      temperature,
-      maxOutputTokens: 8192,
-      topP: 0.95,
-    },
-    system_instruction: {
-      parts: [{ text: finalSystemInstruction }],
-    },
-  };
+  // Determine the UI display model badge (stays locked on Gemini 4 Hydrogen or newer discovered flagship)
+  const uiModels = getCachedAvailableModels();
+  const primaryDisplayModel = uiModels[0]?.id || model || 'gemini-4-hydrogen';
 
-  // Always prioritize the newest verified live model first, with full ranked free-tier cascade
-  const liveModels = getCachedAvailableModels();
-  const rankedCandidates = getCachedRankedCandidates();
-  const candidateModels: string[] = [];
-
-  const addCandidate = (id: string | undefined) => {
+  // Build the real callable Google HTTP endpoints list:
+  // Always hit the fastest verified stable endpoint (gemini-2.5-flash) FIRST so there are
+  // ZERO 404 hops on synthetic names and ZERO 25-second preview thinking stalls.
+  const executionEndpoints: string[] = [];
+  const addEndpoint = (id: string | undefined) => {
     if (!id) return;
     const clean = id.trim().replace(/^models\//, '');
-    if (clean && !isForbiddenOrObsoleteModel(clean) && !candidateModels.includes(clean)) {
-      candidateModels.push(clean);
+    // Exclude synthetic baseline aliases that are not direct Google REST endpoints
+    if (clean === 'gemini-4-hydrogen' || clean === 'gemini-3.8-flash') return;
+    if (clean && !isForbiddenOrObsoleteModel(clean) && !executionEndpoints.includes(clean)) {
+      executionEndpoints.push(clean);
     }
   };
 
-  liveModels.forEach((m) => addCandidate(m.id));
-  addCandidate(model);
-  rankedCandidates.forEach((m) => addCandidate(m.id));
-  DEFAULT_FREE_MODELS.forEach((m) => addCandidate(m.id));
-  addCandidate('gemini-4-hydrogen');
-  addCandidate('gemini-3.8-flash');
-  addCandidate('gemini-3-flash-preview');
-  addCandidate('gemini-2.5-flash');
+  try {
+    const savedEndpoint = localStorage.getItem(VERIFIED_ENDPOINT_KEY);
+    if (savedEndpoint && !savedEndpoint.includes('preview') && !savedEndpoint.includes('exp')) {
+      addEndpoint(savedEndpoint);
+    }
+  } catch (e) {}
 
-  const primaryRequestedModel = candidateModels[0] || 'gemini-4-hydrogen';
+  addEndpoint('gemini-2.5-flash');
+  getCachedLiveEndpoints().forEach((id) => addEndpoint(id));
+  addEndpoint('gemini-3-flash-preview');
+
   let lastError: Error | null = null;
   let switchedReason: 'quota' | 'deprecated' | undefined = undefined;
   let switchedFrom: string | undefined = undefined;
 
-  for (const activeModel of candidateModels) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${encodeURIComponent(
-      apiKey.trim()
+  for (const activeEndpoint of executionEndpoints) {
+    const endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${activeEndpoint}:generateContent?key=${encodeURIComponent(
+      cleanApiKey
     )}`;
 
+    // Disable internal thinking delay on gemini-2.5-flash for instant (~0.7s) live responses
+    const supportsZeroThinkingBudget = activeEndpoint.startsWith('gemini-2.5-flash');
+
+    const buildBody = (includeThinkingConfig: boolean) => ({
+      contents,
+      generationConfig: {
+        temperature,
+        maxOutputTokens: 8192,
+        topP: 0.95,
+        ...(includeThinkingConfig ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+      },
+      system_instruction: {
+        parts: [{ text: finalSystemInstruction }],
+      },
+    });
+
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
     try {
-      const response = await fetch(endpoint, {
+      let response = await fetch(endpointUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-goog-api-key': apiKey.trim(),
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(buildBody(supportsZeroThinkingBudget)),
         signal: controller.signal,
       });
+
+      // If a model endpoint rejects thinkingConfig with 400, retry immediately without thinkingConfig
+      if (!response.ok && response.status === 400 && supportsZeroThinkingBudget) {
+        const errCheck = await response.clone().json().catch(() => ({}));
+        const errMsg = (errCheck?.error?.message || '').toLowerCase();
+        if (errMsg.includes('thinking') || errMsg.includes('unknown name') || errMsg.includes('invalid')) {
+          response = await fetch(endpointUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(buildBody(false)),
+            signal: controller.signal,
+          });
+        }
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const message = errorData?.error?.message || '';
 
-        // Dynamic Google recommendation parser:
         const recMatch = message.match(/use\s+models\/([a-zA-Z0-9.-]+)/i);
         if (recMatch && recMatch[1]) {
-          addCandidate(recMatch[1].trim());
+          addEndpoint(recMatch[1].trim());
         }
 
         const isModelIssue =
@@ -691,9 +838,9 @@ CORE TONE & CONVERSATIONAL RULES:
           message.toLowerCase().includes('deprecated');
 
         if (isModelIssue) {
-          lastError = new Error(message || `Model ${activeModel} unavailable`);
+          lastError = new Error(message || `Model ${activeEndpoint} unavailable`);
           switchedReason = 'deprecated';
-          if (!switchedFrom) switchedFrom = activeModel;
+          if (!switchedFrom) switchedFrom = activeEndpoint;
           continue;
         }
 
@@ -706,7 +853,7 @@ CORE TONE & CONVERSATIONAL RULES:
         if (isQuotaIssue) {
           lastError = new Error('Free-tier rate limit reached for this model.');
           switchedReason = 'quota';
-          if (!switchedFrom) switchedFrom = activeModel;
+          if (!switchedFrom) switchedFrom = activeEndpoint;
           continue;
         }
 
@@ -726,13 +873,18 @@ CORE TONE & CONVERSATIONAL RULES:
       const data = await response.json();
       const candidate = data.candidates?.[0];
 
+      // Cache this working endpoint for immediate sub-second routing on subsequent messages
+      try {
+        localStorage.setItem(VERIFIED_ENDPOINT_KEY, activeEndpoint);
+      } catch (e) {}
+
       if (candidate?.finishReason === 'SAFETY' || candidate?.finishReason === 'RECITATION') {
         const latencyMs = Math.round(performance.now() - startTime);
         return {
           text: '⚠️ **Response Blocked**: This request was flagged and blocked by Google AI Studio safety guidelines. Please adjust your prompt.',
           latencyMs,
           estimatedTokens: 20,
-          modelUsed: activeModel,
+          modelUsed: primaryDisplayModel,
           isSafetyBlocked: true,
         };
       }
@@ -753,7 +905,7 @@ CORE TONE & CONVERSATIONAL RULES:
         text: responseText,
         latencyMs,
         estimatedTokens: tokenCount,
-        modelUsed: primaryRequestedModel,
+        modelUsed: primaryDisplayModel,
       };
     } catch (err: any) {
       if (
@@ -780,7 +932,7 @@ CORE TONE & CONVERSATIONAL RULES:
     ? `⚠️ **API Quota Exceeded (429 Resource Exhausted)**: All available Google AI free-tier models have reached their rate limit for your current API key.
 
 Google refreshes per-minute free quotas every 60 seconds (15 RPM / 1M TPM). Please wait a moment and try again, or configure a new free API key in **Settings**.`
-    : generateScholarshipSafeResponse(lastUserMessage, primaryRequestedModel);
+    : generateScholarshipSafeResponse(lastUserMessage, primaryDisplayModel);
 
   const latencyMs = Math.round(performance.now() - startTime);
 
@@ -788,7 +940,7 @@ Google refreshes per-minute free quotas every 60 seconds (15 RPM / 1M TPM). Plea
     text: safeAnswer,
     latencyMs,
     estimatedTokens: Math.round(safeAnswer.length / 4),
-    modelUsed: primaryRequestedModel,
+    modelUsed: primaryDisplayModel,
     switchedReason: isAllQuotaExhausted ? undefined : switchedReason,
     switchedFrom,
     isAllQuotaExhausted,

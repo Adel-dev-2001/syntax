@@ -123,13 +123,16 @@ export const App: React.FC = () => {
       const exists = validSessions.find((s) => s.id === activeId);
       if (exists) {
         setActiveSessionId(exists.id);
+        activeSessionIdRef.current = exists.id;
       } else {
         // Start on blank new chat
         setActiveSessionId(null);
+        activeSessionIdRef.current = null;
         setCurrentDraftMessages([]);
       }
     } else {
       setActiveSessionId(null);
+      activeSessionIdRef.current = null;
       setCurrentDraftMessages([]);
     }
 
@@ -241,12 +244,14 @@ export const App: React.FC = () => {
 
     // Switch to clean new chat state without creating empty entry in sidebar
     setActiveSessionId(null);
+    activeSessionIdRef.current = null;
     setCurrentDraftMessages([]);
     StorageService.setActiveSessionId('');
   };
 
   const handleSelectSession = (id: string) => {
     setActiveSessionId(id);
+    activeSessionIdRef.current = id;
     StorageService.setActiveSessionId(id);
     setCurrentDraftMessages([]);
   };
@@ -258,6 +263,7 @@ export const App: React.FC = () => {
 
     if (activeSessionId === id) {
       setActiveSessionId(null);
+      activeSessionIdRef.current = null;
       setCurrentDraftMessages([]);
       StorageService.setActiveSessionId('');
     }
@@ -355,7 +361,7 @@ export const App: React.FC = () => {
 
     const totalChars = fullText.length;
     let charIndex = 0;
-    const step = totalChars > 2000 ? 6 : totalChars > 1000 ? 5 : totalChars > 400 ? 3 : 2;
+    const step = totalChars > 2000 ? 12 : totalChars > 1000 ? 8 : totalChars > 400 ? 5 : 3;
 
     await new Promise<void>((resolve) => {
       const finishImmediately = () => {
@@ -458,34 +464,40 @@ export const App: React.FC = () => {
         personaId: PERSONAS[0].id,
       };
 
-      const updatedSessions = [newSession, ...sessions];
-      setSessions(updatedSessions);
       setActiveSessionId(newId);
-      StorageService.saveSessions(updatedSessions);
+      activeSessionIdRef.current = newId;
       StorageService.setActiveSessionId(newId);
+      setSessions((prev) => {
+        const updatedSessions = [newSession, ...prev];
+        StorageService.saveSessions(updatedSessions);
+        return updatedSessions;
+      });
       targetSessionId = newId;
     } else {
       // Update existing session and move it to the TOP of the recent chats list
-      const targetSession = sessions.find((s) => s.id === targetSessionId);
-      const remainingSessions = sessions.filter((s) => s.id !== targetSessionId);
-      const updatedSession: ChatSession = targetSession
-        ? {
-            ...targetSession,
-            updatedAt: Date.now(),
-            messages: newMessagesList,
-          }
-        : {
-            id: targetSessionId,
-            title: text.length > 28 ? text.substring(0, 28) + '...' : text || 'New conversation',
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-            messages: newMessagesList,
-            model: settings.selectedModel,
-            personaId: PERSONAS[0].id,
-          };
-      const updatedSessions = [updatedSession, ...remainingSessions];
-      setSessions(updatedSessions);
-      StorageService.saveSessions(updatedSessions);
+      const existingId = targetSessionId;
+      setSessions((prev) => {
+        const targetSession = prev.find((s) => s.id === existingId);
+        const remainingSessions = prev.filter((s) => s.id !== existingId);
+        const updatedSession: ChatSession = targetSession
+          ? {
+              ...targetSession,
+              updatedAt: Date.now(),
+              messages: newMessagesList,
+            }
+          : {
+              id: existingId,
+              title: text.length > 28 ? text.substring(0, 28) + '...' : text || 'New conversation',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              messages: newMessagesList,
+              model: settings.selectedModel,
+              personaId: PERSONAS[0].id,
+            };
+        const updatedSessions = [updatedSession, ...remainingSessions];
+        StorageService.saveSessions(updatedSessions);
+        return updatedSessions;
+      });
     }
 
     // Mark this session as loading and thinking (concurrent independent tracking)

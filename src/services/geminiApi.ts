@@ -1,11 +1,11 @@
 import { ChatMessage, GeminiModelInfo } from '../types/chat';
 
-export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v10';
+export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v11';
 
 // Purge legacy model cache keys on module load
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
-    for (let i = 1; i <= 9; i++) {
+    for (let i = 1; i <= 10; i++) {
       localStorage.removeItem(`syntax_live_free_models_v${i}`);
     }
   }
@@ -13,14 +13,14 @@ try {
 
 /**
  * Official Active Google Free-Tier Flagship Baseline:
- * Used as the baseline before live key discovery, and automatically upgraded
- * to the single newest verified working Free-Tier Gemini model (e.g. Gemini 4 Hydrogen,
- * Gemini 3.8 Flash, and future generations 5.x, 6.x, 7.x, 8.x+) when the API key is connected.
+ * Used only as the offline fallback before live key discovery, and automatically replaced
+ * by the single newest verified working Free-Tier Gemini model (3.x, 4.x, 5.x, 6.x, 7.x, 8.x+)
+ * as soon as the user connects their Google API key.
  */
 export const DEFAULT_FREE_MODELS: GeminiModelInfo[] = [
   {
-    id: 'gemini-4-hydrogen',
-    name: 'Gemini 4 Hydrogen',
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
     description: 'Official Google Free-Tier flagship architecture optimized for high-speed software engineering, deep reasoning, and multimodal workflows.',
     badge: 'Active & Verified',
     maxTokens: 1048576,
@@ -123,7 +123,7 @@ export function parseModelVersion(id: string): {
   hasDateSuffix: boolean;
 } {
   const clean = id.replace(/^models\//, '').toLowerCase();
-  const versionMatch = clean.match(/^gemini-(\d+)(?:\.(\d+))?(?:\.(\d+))?/) || clean.match(/(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
+  const versionMatch = clean.match(/^gemini-(\d{1,2})(?:\.(\d{1,2}))?(?:\.(\d{1,2}))?(?:-|$)/);
   const major = versionMatch && versionMatch[1] ? parseInt(versionMatch[1], 10) : 0;
   const minor = versionMatch && versionMatch[2] ? parseInt(versionMatch[2], 10) : 0;
   const patch = versionMatch && versionMatch[3] ? parseInt(versionMatch[3], 10) : 0;
@@ -231,9 +231,9 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
 }
 
 /**
- * Top-Down Live Free-Tier Verifier:
- * Tests candidates sequentially from the newest generation down (e.g. Gemini 4 Hydrogen -> Gemini 3.8 Flash -> Gemini 2.5 Flash).
- * Strictly returns ONLY the newest model that genuinely succeeds (HTTP 200 OK) on the user's free API key.
+ * Parallel Live Free-Tier Verifier:
+ * Pings the top ranked flagship candidates in parallel and locks strictly onto the
+ * highest-version model that returns HTTP 200 OK with valid generated content on the user's key.
  */
 async function verifyCandidatesLive(
   apiKey: string,
@@ -242,9 +242,11 @@ async function verifyCandidatesLive(
   const trimmedKey = apiKey.trim();
   if (!trimmedKey || candidates.length === 0) return DEFAULT_FREE_MODELS;
 
-  for (const model of candidates) {
+  const topCandidates = candidates.slice(0, 5);
+
+  const checkModel = async (model: GeminiModelInfo): Promise<{ model: GeminiModelInfo; ok: boolean }> => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${encodeURIComponent(trimmedKey)}`,
@@ -252,20 +254,31 @@ async function verifyCandidatesLive(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: 'ok' }] }],
+            contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
           }),
           signal: controller.signal,
         }
       );
       clearTimeout(timeoutId);
 
-      // Strictly accept ONLY a model that genuinely returns HTTP 200 OK on this API key
-      if (res.ok) {
-        return [{ ...model, badge: 'Active & Verified' }];
+      if (!res.ok) {
+        return { model, ok: false };
       }
+
+      const data = await res.json().catch(() => null);
+      const hasValidContent = Boolean(data?.candidates?.[0]?.content);
+      return { model, ok: hasValidContent };
     } catch {
       clearTimeout(timeoutId);
+      return { model, ok: false };
     }
+  };
+
+  const results = await Promise.all(topCandidates.map(checkModel));
+  const verifiedWorking = results.filter((r) => r.ok).map((r) => r.model);
+
+  if (verifiedWorking.length > 0) {
+    return [{ ...verifiedWorking[0], badge: 'Active & Verified' }];
   }
 
   return DEFAULT_FREE_MODELS;
@@ -648,12 +661,9 @@ CORE TONE & CONVERSATIONAL RULES:
   liveModels.forEach((m) => addCandidate(m.id));
   addCandidate(model);
   DEFAULT_FREE_MODELS.forEach((m) => addCandidate(m.id));
-  addCandidate('gemini-4-hydrogen');
-  addCandidate('gemini-3.8-flash');
-  addCandidate('gemini-3.6-flash');
   addCandidate('gemini-2.5-flash');
 
-  const primaryRequestedModel = candidateModels[0] || 'gemini-4-hydrogen';
+  const primaryRequestedModel = candidateModels[0] || 'gemini-2.5-flash';
   let lastError: Error | null = null;
   let switchedReason: 'quota' | 'deprecated' | undefined = undefined;
   let switchedFrom: string | undefined = undefined;

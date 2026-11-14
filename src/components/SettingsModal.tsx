@@ -85,10 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         availableModels && availableModels.length > 0 ? availableModels : getCachedAvailableModels();
       setModelList(currentList);
 
-      const targetModel =
-        settings.selectedModel && currentList.some((m) => m.id === settings.selectedModel)
-          ? settings.selectedModel
-          : currentList[0]?.id || 'gemini-2.5-flash';
+      const targetModel = currentList[0]?.id || settings.selectedModel || 'gemini-2.5-flash';
 
       setFormData({
         ...settings,
@@ -100,7 +97,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setTestMessage('');
       setEditingMemoryId(null);
     }
-  }, [settings, isOpen, availableModels]);
+  }, [isOpen]);
 
   // Close on Escape key
   useEffect(() => {
@@ -143,10 +140,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         let updatedSelectedModel = formData.selectedModel;
         if (result.models && result.models.length > 0) {
           setModelList(result.models);
-          // If the currently chosen model is not supported, automatically select the top discovered model
-          if (!result.models.some((m) => m.id === formData.selectedModel)) {
-            updatedSelectedModel = result.models[0].id;
-          }
+          updatedSelectedModel = result.models[0].id;
+          setFormData((prev) => ({ ...prev, selectedModel: updatedSelectedModel }));
         }
         setTestStatus('success');
         setTestMessage(result.message);

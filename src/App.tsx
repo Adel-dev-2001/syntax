@@ -106,7 +106,7 @@ export const App: React.FC = () => {
       loadedSettings.selectedModel === 'Syntax Onboard Engine' ||
       isForbiddenOrObsoleteModel(loadedSettings.selectedModel)
     ) {
-      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-4-hydrogen';
+      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-2.5-flash';
       StorageService.saveSettings(loadedSettings);
     }
     setSettings(loadedSettings);
@@ -989,9 +989,12 @@ export const App: React.FC = () => {
           setSettings(newSettings);
           StorageService.saveSettings(newSettings);
           if (newSettings.apiKey && newSettings.apiKey.trim()) {
-            fetchLiveAvailableModels(newSettings.apiKey).then((live) => {
+            fetchLiveAvailableModels(newSettings.apiKey, true).then((live) => {
               if (live && live.length > 0) {
-                setAvailableModels(live);
+                setAvailableModels([live[0]]);
+                const updated = { ...newSettings, selectedModel: live[0].id };
+                setSettings(updated);
+                StorageService.saveSettings(updated);
               }
             });
           }

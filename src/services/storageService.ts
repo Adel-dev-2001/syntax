@@ -9,7 +9,7 @@ const SETTINGS_KEY = 'syntax_ai_settings_v1';
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light', // Light mode by default
   apiKey: '',
-  selectedModel: 'gemini-4-hydrogen',
+  selectedModel: 'gemini-2.5-flash',
   temperature: 0.7,
   customSystemPrompt: '',
   streamResponse: true,
@@ -46,7 +46,7 @@ export const StorageService = {
             model:
               !s.model ||
               isForbiddenOrObsoleteModel(s.model)
-                ? 'gemini-4-hydrogen'
+                ? 'gemini-2.5-flash'
                 : s.model,
             messages: cleanMessages,
           };
@@ -86,9 +86,9 @@ export const StorageService = {
       const data = localStorage.getItem(SETTINGS_KEY);
       if (!data) return DEFAULT_SETTINGS;
       const parsed = JSON.parse(data);
-      let model = parsed.selectedModel || 'gemini-4-hydrogen';
+      let model = parsed.selectedModel || 'gemini-2.5-flash';
       if (!model || isForbiddenOrObsoleteModel(model)) {
-        model = 'gemini-4-hydrogen';
+        model = 'gemini-2.5-flash';
       }
       if (parsed.selectedModel !== model) {
         try {

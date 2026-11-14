@@ -103,11 +103,10 @@ export const App: React.FC = () => {
     // Model assignment: sanitize obsolete or non-chat models to active free tier
     if (
       !loadedSettings.selectedModel ||
-      loadedSettings.selectedModel === 'gemini-3.8-flash' ||
       loadedSettings.selectedModel === 'Syntax Onboard Engine' ||
       isForbiddenOrObsoleteModel(loadedSettings.selectedModel)
     ) {
-      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-2.5-flash';
+      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-3.8-flash';
       StorageService.saveSettings(loadedSettings);
     }
     setSettings(loadedSettings);

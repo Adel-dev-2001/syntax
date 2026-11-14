@@ -1,32 +1,27 @@
 import { ChatMessage, GeminiModelInfo } from '../types/chat';
 
-export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v9';
+export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v10';
 
 // Purge legacy model cache keys on module load
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
-    localStorage.removeItem('syntax_live_free_models_v1');
-    localStorage.removeItem('syntax_live_free_models_v2');
-    localStorage.removeItem('syntax_live_free_models_v3');
-    localStorage.removeItem('syntax_live_free_models_v4');
-    localStorage.removeItem('syntax_live_free_models_v5');
-    localStorage.removeItem('syntax_live_free_models_v6');
-    localStorage.removeItem('syntax_live_free_models_v7');
-    localStorage.removeItem('syntax_live_free_models_v8');
+    for (let i = 1; i <= 9; i++) {
+      localStorage.removeItem(`syntax_live_free_models_v${i}`);
+    }
   }
 } catch (e) {}
 
 /**
  * Official Active Google Free-Tier Flagship Baseline:
- * Used as the safe baseline before live key discovery, and automatically upgraded
- * to the single newest verified working Free-Tier Gemini Flash model (3.x, 4.x, 5.x, 6.x+)
- * as soon as the user connects their Google API key.
+ * Used as the baseline before live key discovery, and automatically upgraded
+ * to the single newest verified working Free-Tier Gemini model (e.g. Gemini 4 Hydrogen,
+ * Gemini 3.8 Flash, and future generations 5.x, 6.x, 7.x, 8.x+) when the API key is connected.
  */
 export const DEFAULT_FREE_MODELS: GeminiModelInfo[] = [
   {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash',
-    description: 'Official Google Free-Tier flagship architecture optimized for software engineering, deep reasoning, and multimodal workflows.',
+    id: 'gemini-4-hydrogen',
+    name: 'Gemini 4 Hydrogen',
+    description: 'Official Google Free-Tier flagship architecture optimized for high-speed software engineering, deep reasoning, and multimodal workflows.',
     badge: 'Active & Verified',
     maxTokens: 1048576,
     recommendedFor: 'Advanced reasoning, coding logic, and multimodal vision'
@@ -37,10 +32,11 @@ export const AVAILABLE_MODELS = DEFAULT_FREE_MODELS;
 
 /**
  * Strict Free-Tier Flagship Model Filter:
- * Rejects paid-only tiers (Carbon, Argon, Hydrogen, Pro, Ultra), legacy models (1.0, 1.5, 2.0),
+ * Rejects paid-only tiers (Carbon, Argon, Pro, Ultra), legacy models (1.0, 1.5, 2.0),
  * cut-down sub-tiers (Lite, 8B, Nano Banana), non-Gemini families (Gemma, LearnLM, PaLM/Bison),
- * and non-text endpoints (image, audio, video, embedding).
- * Allows strictly genuine Free-Tier Gemini Flash flagship models across all current and future generations (2.5, 3.x, 4.x, 5.x, 6.x, 7.x, 8.x+).
+ * and non-text endpoints (image, audio, video, embedding, decision).
+ * Allows strictly genuine Free-Tier flagship Gemini models across all generations
+ * (e.g., Gemini 4 Hydrogen, Gemini 3.8 Flash, Gemini 2.5 Flash, and future 5.x, 6.x, 7.x, 8.x+).
  */
 export function isForbiddenOrObsoleteModel(id?: string, displayName?: string): boolean {
   if (!id) return true;
@@ -56,7 +52,6 @@ export function isForbiddenOrObsoleteModel(id?: string, displayName?: string): b
     '2.0',
     'carbon',
     'argon',
-    'hydrogen',
     'pro',
     'ultra',
     'lite',
@@ -116,13 +111,14 @@ export function getCachedAvailableModels(): GeminiModelInfo[] {
 
 /**
  * Forward-Compatible Version Parser:
- * Dynamically extracts version numbers from any current or future Gemini Flash model ID
- * (e.g., gemini-2.5-flash, gemini-3-flash, gemini-4-flash, gemini-5-flash, gemini-8-flash).
+ * Dynamically extracts version numbers from any current or future Gemini model ID
+ * across generations 2.5, 3.x, 4.x (Hydrogen), 5.x, 6.x, 7.x, 8.x, 10.x+.
  */
 export function parseModelVersion(id: string): {
   major: number;
   minor: number;
   patch: number;
+  isFlagshipFreeFamily: boolean;
   isExperimental: boolean;
   hasDateSuffix: boolean;
 } {
@@ -131,9 +127,10 @@ export function parseModelVersion(id: string): {
   const major = versionMatch && versionMatch[1] ? parseInt(versionMatch[1], 10) : 0;
   const minor = versionMatch && versionMatch[2] ? parseInt(versionMatch[2], 10) : 0;
   const patch = versionMatch && versionMatch[3] ? parseInt(versionMatch[3], 10) : 0;
+  const isFlagshipFreeFamily = clean.includes('hydrogen') || clean.includes('flash');
   const isExperimental = clean.includes('exp') || clean.includes('preview');
   const hasDateSuffix = /-\d{2,4}-\d{2}/.test(clean) || /-\d{4}$/.test(clean);
-  return { major, minor, patch, isExperimental, hasDateSuffix };
+  return { major, minor, patch, isFlagshipFreeFamily, isExperimental, hasDateSuffix };
 }
 
 function formatDisplayName(id: string): string {
@@ -149,8 +146,9 @@ function formatDisplayName(id: string): string {
 
 /**
  * Dynamic Free-Tier Model Ranker:
- * Filters strictly for Google's Free-Tier Gemini Flash flagship family (excluding paid Carbon/Pro/Argon and weak Lite)
- * and ranks them in descending version order (8.x > 7.x > 6.x > 5.x > 4.x > 3.x > 2.5).
+ * Filters strictly for Google's Free-Tier flagship models (Gemini 4 Hydrogen, Gemini 3.8 Flash,
+ * Gemini 2.5 Flash, and future 5.x/6.x/7.x/8.x+ free-tier models) while excluding paid Carbon/Argon/Pro
+ * and weak Lite variants. Ranks strictly by newest generation first.
  */
 export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
   if (!Array.isArray(googleModels)) return DEFAULT_FREE_MODELS;
@@ -167,15 +165,14 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
     const v = parseModelVersion(id);
     if (v.major < 2 || (v.major === 2 && v.minor < 5)) return false;
 
-    // Strictly the Free-Tier Gemini Flash flagship line across all generations
-    return id.includes('flash');
+    return true;
   });
 
   if (eligible.length === 0) {
     return DEFAULT_FREE_MODELS;
   }
 
-  // Sort strictly by newest generation first (e.g., 8.x > 7.x > 6.x > 5.x > 4.x > 3.x > 2.5)
+  // Sort strictly by newest generation first (e.g., 8.x > 7.x > 6.x > 5.x > 4.x Hydrogen > 3.8 Flash > 2.5 Flash)
   eligible.sort((a: any, b: any) => {
     const idA = (a.name || '').replace(/^models\//, '');
     const idB = (b.name || '').replace(/^models\//, '');
@@ -185,6 +182,11 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
     if (vA.major !== vB.major) return vB.major - vA.major;
     if (vA.minor !== vB.minor) return vB.minor - vA.minor;
     if (vA.patch !== vB.patch) return vB.patch - vA.patch;
+
+    // Prefer primary free flagship tier (Hydrogen / Flash) within the same version
+    if (vA.isFlagshipFreeFamily !== vB.isFlagshipFreeFamily) {
+      return vA.isFlagshipFreeFamily ? -1 : 1;
+    }
 
     // Prefer clean canonical model alias over date-stamped snapshots
     if (vA.hasDateSuffix !== vB.hasDateSuffix) return vA.hasDateSuffix ? 1 : -1;
@@ -230,9 +232,8 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
 
 /**
  * Top-Down Live Free-Tier Verifier:
- * Tests candidates sequentially from the newest generation down.
- * Strictly returns ONLY a model that genuinely succeeds (200 OK) on the user's free API key.
- * Never returns an unverified or paid-only model.
+ * Tests candidates sequentially from the newest generation down (e.g. Gemini 4 Hydrogen -> Gemini 3.8 Flash -> Gemini 2.5 Flash).
+ * Strictly returns ONLY the newest model that genuinely succeeds (HTTP 200 OK) on the user's free API key.
  */
 async function verifyCandidatesLive(
   apiKey: string,
@@ -243,7 +244,7 @@ async function verifyCandidatesLive(
 
   for (const model of candidates) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${encodeURIComponent(trimmedKey)}`,
@@ -647,9 +648,12 @@ CORE TONE & CONVERSATIONAL RULES:
   liveModels.forEach((m) => addCandidate(m.id));
   addCandidate(model);
   DEFAULT_FREE_MODELS.forEach((m) => addCandidate(m.id));
+  addCandidate('gemini-4-hydrogen');
+  addCandidate('gemini-3.8-flash');
+  addCandidate('gemini-3.6-flash');
   addCandidate('gemini-2.5-flash');
 
-  const primaryRequestedModel = candidateModels[0] || 'gemini-2.5-flash';
+  const primaryRequestedModel = candidateModels[0] || 'gemini-4-hydrogen';
   let lastError: Error | null = null;
   let switchedReason: 'quota' | 'deprecated' | undefined = undefined;
   let switchedFrom: string | undefined = undefined;

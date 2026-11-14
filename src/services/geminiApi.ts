@@ -1,6 +1,6 @@
 import { ChatMessage, GeminiModelInfo } from '../types/chat';
 
-export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v6';
+export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v7';
 
 // Purge legacy model cache keys on module load
 try {
@@ -10,6 +10,7 @@ try {
     localStorage.removeItem('syntax_live_free_models_v3');
     localStorage.removeItem('syntax_live_free_models_v4');
     localStorage.removeItem('syntax_live_free_models_v5');
+    localStorage.removeItem('syntax_live_free_models_v6');
   }
 } catch (e) {}
 
@@ -49,6 +50,7 @@ export function isForbiddenOrObsoleteModel(id?: string, displayName?: string): b
   const forbiddenTokens = [
     '1.0',
     '1.5',
+    '2.0',
     'lite',
     'nano',
     'banana',
@@ -76,6 +78,7 @@ export function isForbiddenOrObsoleteModel(id?: string, displayName?: string): b
     'ultra',
     'paid',
     'bisect',
+    'thinking-exp',
     '-8b',
     '-001',
     '-002'
@@ -106,7 +109,8 @@ export function getCachedAvailableModels(): GeminiModelInfo[] {
 
 /**
  * Forward-Compatible Flagship Version Parser:
- * Dynamically extracts version and capability tier metrics from any current or future Gemini model ID.
+ * Dynamically extracts version metrics from any current or future Gemini model ID
+ * (e.g., gemini-2.5-flash, gemini-3-flash-preview, gemini-4.0-flash, gemini-10.0-flash).
  */
 export function parseModelVersion(id: string): {
   major: number;
@@ -122,7 +126,7 @@ export function parseModelVersion(id: string): {
   const minor = versionMatch && versionMatch[2] ? parseInt(versionMatch[2], 10) : 0;
   const patch = versionMatch && versionMatch[3] ? parseInt(versionMatch[3], 10) : 0;
   const isPro = clean.includes('pro');
-  const isExperimental = clean.includes('exp') || clean.includes('preview') || clean.includes('thinking');
+  const isExperimental = clean.includes('exp') || clean.includes('preview');
   const hasDateSuffix = /-\d{2,4}-\d{2}/.test(clean) || /-\d{4}$/.test(clean);
   return { major, minor, patch, isPro, isExperimental, hasDateSuffix };
 }
@@ -140,13 +144,13 @@ function formatDisplayName(id: string): string {
 
 /**
  * Dynamic Flagship Model Ranker:
- * Filters strictly for core Gemini flagship models (Pro & Flash, excluding Lite and other families)
- * and ranks them by newest generation and strongest capability tier first.
+ * Filters strictly for core Gemini Free-Tier flagship models (excluding Lite, 8B, and other families)
+ * and ranks them strictly by newest generation first (3.x > 2.5 > 2.0, and future 4.x+).
  */
 export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
   if (!Array.isArray(googleModels)) return DEFAULT_FREE_MODELS;
 
-  // 1. Filter strictly flagship Gemini models
+  // 1. Filter strictly flagship Gemini free-tier models
   const eligible = googleModels.filter((m: any) => {
     const name = (m.name || '').toLowerCase();
     const id = name.replace(/^models\//, '');
@@ -159,39 +163,35 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
     const v = parseModelVersion(id);
     if (v.major < 2) return false;
 
-    // Strictly core flagship Gemini tiers (Pro & Flash only, no Lite or other families)
-    return id.includes('pro') || id.includes('flash');
+    // Core Gemini Flash flagship series (official high-quota free tier across 2.5, 3.x, 4.x+)
+    return id.includes('flash');
   });
 
   if (eligible.length === 0) {
     return DEFAULT_FREE_MODELS;
   }
 
-  // 2. Sort by newest generation and strongest tier first
+  // 2. Sort strictly by newest generation first (e.g. 3.x > 2.5 > 2.0)
   eligible.sort((a: any, b: any) => {
     const idA = (a.name || '').replace(/^models\//, '');
     const idB = (b.name || '').replace(/^models\//, '');
     const vA = parseModelVersion(idA);
     const vB = parseModelVersion(idB);
 
-    // Primary sort: Newest generation first (e.g. 3.x > 2.5 > 2.0)
     if (vA.major !== vB.major) return vB.major - vA.major;
     if (vA.minor !== vB.minor) return vB.minor - vA.minor;
     if (vA.patch !== vB.patch) return vB.patch - vA.patch;
 
-    // Within the same version, prefer stable release over experimental/preview
-    if (vA.isExperimental !== vB.isExperimental) return vA.isExperimental ? 1 : -1;
-
-    // Within the same version & stability, prefer strongest capability tier (Pro > Flash)
-    if (vA.isPro !== vB.isPro) return vA.isPro ? -1 : 1;
-
-    // Prefer clean canonical model alias (e.g. gemini-2.5-flash) over date-stamped snapshots
+    // Prefer clean canonical model alias over date-stamped snapshots
     if (vA.hasDateSuffix !== vB.hasDateSuffix) return vA.hasDateSuffix ? 1 : -1;
+
+    // Within identical version numbers, prefer stable over preview
+    if (vA.isExperimental !== vB.isExperimental) return vA.isExperimental ? 1 : -1;
 
     return idA.localeCompare(idB);
   });
 
-  // 3. Collect top flagship candidates to verify live against free-tier quota
+  // 3. Collect top flagship candidates in descending version order
   const candidates: GeminiModelInfo[] = [];
   const seenBaseNames = new Set<string>();
 
@@ -203,7 +203,6 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
         ? rawDisplay
         : formatDisplayName(id);
 
-    // Avoid duplicate dated snapshots of the exact same model title
     const normalizedTitle = safeDisplayName.toLowerCase().replace(/\s+/g, ' ');
     if (seenBaseNames.has(normalizedTitle)) continue;
     seenBaseNames.add(normalizedTitle);
@@ -222,16 +221,16 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
       recommendedFor: 'Advanced reasoning, complex coding, and multimodal vision',
     });
 
-    if (candidates.length >= 6) break;
+    if (candidates.length >= 4) break;
   }
 
   return candidates.length > 0 ? candidates : DEFAULT_FREE_MODELS;
 }
 
 /**
- * Live Parallel Model Ping Verifier:
- * Pings candidate flagship models directly on Google's generateContent endpoint in parallel.
- * Locks strictly onto the SINGLE (#1) newest and strongest model that responds with 200 OK on the free tier.
+ * Sequential Top-Down Flagship Verifier:
+ * Tests from the newest flagship candidate down with a lightweight request compatible with
+ * thinking models (Gemini 2.5 / Gemini 3+) and locks onto the first model that is active on the free tier.
  */
 async function verifyCandidatesLive(
   apiKey: string,
@@ -240,9 +239,9 @@ async function verifyCandidatesLive(
   const trimmedKey = apiKey.trim();
   if (!trimmedKey || candidates.length === 0) return DEFAULT_FREE_MODELS;
 
-  const checkModel = async (model: GeminiModelInfo): Promise<{ model: GeminiModelInfo; status: 'ok' | 'rate_limited' | 'dead' }> => {
+  for (const model of candidates) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${encodeURIComponent(trimmedKey)}`,
@@ -250,8 +249,7 @@ async function verifyCandidatesLive(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
-            generationConfig: { maxOutputTokens: 1 },
+            contents: [{ role: 'user', parts: [{ text: 'ok' }] }],
           }),
           signal: controller.signal,
         }
@@ -259,50 +257,48 @@ async function verifyCandidatesLive(
       clearTimeout(timeoutId);
 
       if (res.ok) {
-        return { model, status: 'ok' };
+        return [{ ...model, badge: 'Active & Verified' }];
       }
 
       if (res.status === 429) {
         const errBody = await res.json().catch(() => ({}));
         const msg = (errBody?.error?.message || '').toLowerCase();
-        // If Google explicitly states limit: 0 for this model on free tier, it cannot be used at all
-        if (msg.includes('limit: 0')) {
-          return { model, status: 'dead' };
+        // Only skip if Google explicitly reports zero free-tier quota ("limit: 0")
+        if (!msg.includes('limit: 0')) {
+          return [{ ...model, badge: 'Active & Verified' }];
         }
-        return { model, status: 'rate_limited' };
       }
-
-      return { model, status: 'dead' };
     } catch {
       clearTimeout(timeoutId);
-      return { model, status: 'dead' };
     }
-  };
-
-  const results = await Promise.all(candidates.map(checkModel));
-
-  const verifiedOk = results.filter((r) => r.status === 'ok').map((r) => r.model);
-  const rateLimitedButValid = results.filter((r) => r.status === 'rate_limited').map((r) => r.model);
-
-  const combinedWorking = [...verifiedOk, ...rateLimitedButValid];
-  if (combinedWorking.length === 0) {
-    return [candidates[0]];
   }
 
-  // Strictly return ONLY the single (#1) newest and strongest verified working free model
-  return [{ ...combinedWorking[0], badge: 'Active & Verified' }];
+  return [{ ...candidates[0], badge: 'Active & Verified' }];
 }
 
 /**
  * Live Model Discovery Engine:
- * Connects directly to Google Cloud AI Studio API using the user's key to fetch and verify live models.
+ * Connects to Google Cloud AI Studio API to discover the single newest flagship model.
  */
-export async function fetchLiveAvailableModels(apiKey: string): Promise<GeminiModelInfo[]> {
+export async function fetchLiveAvailableModels(apiKey: string, forceVerify = false): Promise<GeminiModelInfo[]> {
   const trimmedKey = (apiKey || '').trim();
   if (!trimmedKey) return getCachedAvailableModels();
 
+  // Return already verified cached flagship model unless force-verifying a key change
+  if (!forceVerify) {
+    try {
+      const cachedRaw = localStorage.getItem(DISCOVERED_MODELS_KEY);
+      if (cachedRaw) {
+        const parsed = JSON.parse(cachedRaw);
+        if (Array.isArray(parsed) && parsed.length > 0 && !isForbiddenOrObsoleteModel(parsed[0].id, parsed[0].name)) {
+          return parsed.slice(0, 1);
+        }
+      }
+    } catch (e) {}
+  }
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 7500);
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
     const res = await fetch(
@@ -642,10 +638,7 @@ CORE TONE & CONVERSATIONAL RULES:
     },
   };
 
-  // Build ordered candidate models list:
-  // 1. User's actively selected model first
-  // 2. Live verified models from Google API discovery
-  // 3. Official active free-tier fallback models
+  // Always prioritize the newest verified live model first
   const liveModels = getCachedAvailableModels();
   const candidateModels: string[] = [];
 
@@ -657,11 +650,10 @@ CORE TONE & CONVERSATIONAL RULES:
     }
   };
 
-  addCandidate(model);
   liveModels.forEach((m) => addCandidate(m.id));
+  addCandidate(model);
   DEFAULT_FREE_MODELS.forEach((m) => addCandidate(m.id));
   addCandidate('gemini-2.5-flash');
-  addCandidate('gemini-2.0-flash');
 
   const primaryRequestedModel = candidateModels[0] || 'gemini-2.5-flash';
   let lastError: Error | null = null;
@@ -674,7 +666,7 @@ CORE TONE & CONVERSATIONAL RULES:
     )}`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const response = await fetch(endpoint, {

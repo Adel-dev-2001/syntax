@@ -1,11 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Sparkles,
   Zap,
   AlertTriangle,
   RefreshCw,
-  X,
-  CheckCircle2
+  X
 } from 'lucide-react';
 
 export interface ToastItem {
@@ -37,13 +36,37 @@ const ToastCard: React.FC<{ toast: ToastItem; onDismiss: (id: string) => void }>
   toast,
   onDismiss,
 }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onDismiss(toast.id);
-    }, toast.duration || 5500);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
 
-    return () => clearTimeout(timer);
-  }, [toast.id, toast.duration, onDismiss]);
+  const duration = toast.duration || 4000;
+
+  const triggerExit = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onDismissRef.current(toast.id);
+    }, 320);
+  };
+
+  useEffect(() => {
+    const enterFrame = requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+
+    const timer = setTimeout(() => {
+      setIsExiting(true);
+      setTimeout(() => {
+        onDismissRef.current(toast.id);
+      }, 320);
+    }, duration);
+
+    return () => {
+      cancelAnimationFrame(enterFrame);
+      clearTimeout(timer);
+    };
+  }, [toast.id, duration]);
 
   const getIcon = () => {
     switch (toast.type) {
@@ -55,7 +78,7 @@ const ToastCard: React.FC<{ toast: ToastItem; onDismiss: (id: string) => void }>
         );
       case 'quota':
         return (
-          <div className="w-8 h-8 rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 shadow-xs animate-pulse">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0 shadow-xs">
             <Zap className="w-4 h-4 fill-current" />
           </div>
         );
@@ -78,7 +101,14 @@ const ToastCard: React.FC<{ toast: ToastItem; onDismiss: (id: string) => void }>
   return (
     <div
       role="alert"
-      className="pointer-events-auto relative group overflow-hidden rounded-2xl bg-white/95 dark:bg-[#151622]/95 backdrop-blur-2xl border border-zinc-200/80 dark:border-white/10 shadow-xl shadow-black/5 dark:shadow-[0_12px_36px_rgba(0,0,0,0.6)] p-3.5 flex items-start gap-3 transition-all duration-300 animate-in slide-in-from-top-4 fade-in"
+      style={{
+        transition: 'all 320ms cubic-bezier(0.22, 1, 0.36, 1)',
+      }}
+      className={`pointer-events-auto relative group overflow-hidden rounded-2xl bg-white/95 dark:bg-[#151622]/95 backdrop-blur-2xl border border-zinc-200/80 dark:border-white/10 shadow-xl shadow-black/5 dark:shadow-[0_12px_36px_rgba(0,0,0,0.6)] p-3.5 flex items-start gap-3 ${
+        isVisible && !isExiting
+          ? 'opacity-100 translate-y-0 translate-x-0 scale-100'
+          : 'opacity-0 -translate-y-2 translate-x-4 scale-95'
+      }`}
     >
       {/* Subtle ambient accent glow behind toast card */}
       <div
@@ -101,7 +131,7 @@ const ToastCard: React.FC<{ toast: ToastItem; onDismiss: (id: string) => void }>
             {toast.title}
           </h4>
           <button
-            onClick={() => onDismiss(toast.id)}
+            onClick={triggerExit}
             className="text-zinc-400 hover:text-zinc-700 dark:hover:text-white p-0.5 rounded-lg transition-colors cursor-pointer"
             title="Dismiss"
           >
@@ -111,6 +141,25 @@ const ToastCard: React.FC<{ toast: ToastItem; onDismiss: (id: string) => void }>
         <p className="text-[11.5px] text-zinc-600 dark:text-zinc-300 leading-relaxed mt-0.5">
           {toast.message}
         </p>
+      </div>
+
+      {/* Smooth auto-dismiss countdown progress indicator */}
+      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-200/40 dark:bg-white/5 overflow-hidden">
+        <div
+          style={{
+            width: isVisible && !isExiting ? '0%' : '100%',
+            transition: `width ${duration}ms linear`,
+          }}
+          className={`h-full ${
+            toast.type === 'success'
+              ? 'bg-emerald-500/70'
+              : toast.type === 'quota'
+              ? 'bg-amber-500/70'
+              : toast.type === 'warning'
+              ? 'bg-orange-500/70'
+              : 'bg-indigo-500/70'
+          }`}
+        />
       </div>
     </div>
   );

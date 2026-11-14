@@ -56,7 +56,12 @@ export const App: React.FC = () => {
 
   const addToast = (type: ToastItem['type'], title: string, message: string) => {
     const id = `toast_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    setToasts((prev) => [...prev.slice(-3), { id, type, title, message }]);
+    setToasts((prev) => {
+      if (prev.some((t) => t.title === title && t.message === message)) {
+        return prev;
+      }
+      return [...prev.slice(-2), { id, type, title, message }];
+    });
   };
 
   const dismissToast = (id: string) => {
@@ -147,10 +152,7 @@ export const App: React.FC = () => {
     selectedModelRef.current = settings.selectedModel;
   }, [settings.selectedModel]);
 
-  const hasSyncedLiveOnceRef = useRef(false);
-
-  // Continuous Live Synchronization Engine with Google AI Studio:
-  // Detects new Google models, sunset/deprecated models, or auto-switches deprecated active model.
+  // Synchronize active model with the newest verified Google Free-Tier flagship model
   const runLiveSync = async () => {
     const currentKey = settings.apiKey?.trim();
     if (!currentKey) return;
@@ -160,84 +162,27 @@ export const App: React.FC = () => {
       const currentSelected = selectedModelRef.current;
 
       const sync = await syncLiveModelsWithGoogle(currentKey, currentModels, currentSelected);
-      if (!sync) return;
+      if (!sync || !sync.updatedModels || sync.updatedModels.length === 0) return;
 
-      setAvailableModels(sync.updatedModels);
+      const newestModel = sync.updatedModels[0];
+      setAvailableModels([newestModel]);
 
-      // On first sync, align selectedModel to verified live models silently without diff toasts against defaults
-      if (!hasSyncedLiveOnceRef.current) {
-        hasSyncedLiveOnceRef.current = true;
-        if (sync.fallbackModelNeeded) {
-          const fallback = sync.fallbackModelNeeded;
-          setSettings((prev) => {
-            const updated = { ...prev, selectedModel: fallback.id };
-            StorageService.saveSettings(updated);
-            return updated;
-          });
-        }
-        return;
-      }
-
-      // 1. Notify user of brand-new Google model releases during active session
-      if (sync.newModelsDetected && sync.newModelsDetected.length > 0) {
-        sync.newModelsDetected.forEach((m) => {
-          addToast(
-            'success',
-            'New Google Model Detected',
-            `Google published ${m.name}! It has been added to your model selector.`
-          );
-        });
-      }
-
-      // 2. Notify user if Google sunset/removed a model during active session
-      if (sync.deletedModelsDetected && sync.deletedModelsDetected.length > 0) {
-        sync.deletedModelsDetected.forEach((m) => {
-          addToast(
-            'warning',
-            'Google Model Deprecated',
-            `${m.name} was sunset and removed from Google Cloud servers.`
-          );
-        });
-      }
-
-      // 3. Auto-migrate active model if the previously chosen model was deleted by Google
-      if (sync.fallbackModelNeeded) {
-        const fallback = sync.fallbackModelNeeded;
+      if (currentSelected !== newestModel.id) {
         setSettings((prev) => {
-          const updated = { ...prev, selectedModel: fallback.id };
+          const updated = { ...prev, selectedModel: newestModel.id };
           StorageService.saveSettings(updated);
           return updated;
         });
-        addToast(
-          'warning',
-          'Active Model Migrated',
-          `Your active model was discontinued by Google. Automatically switched to ${fallback.name}.`
-        );
       }
     } catch (e) {
       console.warn('Live sync check error:', e);
     }
   };
 
-  // Background Live Sync: Runs on mount / API key change, periodically every 90s, and on browser focus
+  // Run model discovery once when the API key is configured or changed
   useEffect(() => {
     if (!settings.apiKey || !settings.apiKey.trim()) return;
-
     runLiveSync();
-
-    const interval = setInterval(() => {
-      runLiveSync();
-    }, 90000);
-
-    const handleFocus = () => {
-      runLiveSync();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-    };
   }, [settings.apiKey]);
 
   // Strictly enforce brand name "Syntax" in browser tab
@@ -570,12 +515,12 @@ export const App: React.FC = () => {
           temperature: settings.temperature,
         });
 
-        // Live Quota, Safety & Deprecation Notifications
+        // Genuine API Quota & Safety Notifications
         if (response.isAllQuotaExhausted) {
           addToast(
             'quota',
             'Google AI Quota Exceeded',
-            'All free-tier models have reached their rate limit (429). Google resets quota every minute. You can retry shortly or update your key in Settings.'
+            'Free-tier rate limit (429) reached. Google resets per-minute quota every 60 seconds.'
           );
         } else if (response.isSafetyBlocked) {
           addToast(
@@ -583,31 +528,6 @@ export const App: React.FC = () => {
             'Safety Filter Triggered',
             'This response was filtered by Google AI safety guidelines.'
           );
-        } else if (response.switchedReason === 'quota') {
-          addToast(
-            'quota',
-            'Rate Limit Auto-Failover',
-            `Google rate limit reached for ${response.switchedFrom || 'active model'}. Routed to ${response.modelUsed || 'alternative model'} with zero downtime.`
-          );
-        } else if (response.switchedReason === 'deprecated') {
-          addToast(
-            'warning',
-            'Model Unavailable',
-            `${response.switchedFrom || 'Selected model'} was unavailable on Google servers. Automatically routed to ${response.modelUsed || 'alternative model'}.`
-          );
-        }
-
-        // Keep active model in sync if seamless failover took place
-        if (
-          response.modelUsed &&
-          response.modelUsed !== settings.selectedModel &&
-          response.modelUsed !== 'Syntax Onboard Engine'
-        ) {
-          setSettings((prev) => {
-            const updated = { ...prev, selectedModel: response.modelUsed! };
-            StorageService.saveSettings(updated);
-            return updated;
-          });
         }
 
         // Dismiss thinking radar for this session
@@ -723,12 +643,12 @@ export const App: React.FC = () => {
         temperature: settings.temperature,
       });
 
-      // Live Quota, Safety & Deprecation Notifications
+      // Genuine API Quota & Safety Notifications
       if (response.isAllQuotaExhausted) {
         addToast(
           'quota',
           'Google AI Quota Exceeded',
-          'All free-tier models have reached their rate limit (429). Google resets quota every minute. You can retry shortly or update your key in Settings.'
+          'Free-tier rate limit (429) reached. Google resets per-minute quota every 60 seconds.'
         );
       } else if (response.isSafetyBlocked) {
         addToast(
@@ -736,31 +656,6 @@ export const App: React.FC = () => {
           'Safety Filter Triggered',
           'This response was filtered by Google AI safety guidelines.'
         );
-      } else if (response.switchedReason === 'quota') {
-        addToast(
-          'quota',
-          'Rate Limit Auto-Failover',
-          `Google rate limit reached for ${response.switchedFrom || 'active model'}. Routed to ${response.modelUsed || 'alternative model'} with zero downtime.`
-        );
-      } else if (response.switchedReason === 'deprecated') {
-        addToast(
-          'warning',
-          'Model Unavailable',
-          `${response.switchedFrom || 'Selected model'} was unavailable on Google servers. Automatically routed to ${response.modelUsed || 'alternative model'}.`
-        );
-      }
-
-      // Keep active model in sync if seamless failover took place
-      if (
-        response.modelUsed &&
-        response.modelUsed !== settings.selectedModel &&
-        response.modelUsed !== 'Syntax Onboard Engine'
-      ) {
-        setSettings((prev) => {
-          const updated = { ...prev, selectedModel: response.modelUsed! };
-          StorageService.saveSettings(updated);
-          return updated;
-        });
       }
 
       // Immediately dismiss thinking radar

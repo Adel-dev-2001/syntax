@@ -85,7 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         availableModels && availableModels.length > 0 ? availableModels : getCachedAvailableModels();
       setModelList(currentList);
 
-      const targetModel = currentList[0]?.id || settings.selectedModel || 'gemini-2.5-flash';
+      const targetModel = currentList[0]?.id || settings.selectedModel || 'gemini-4-hydrogen';
 
       setFormData({
         ...settings,

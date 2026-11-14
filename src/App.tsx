@@ -30,8 +30,8 @@ export const App: React.FC = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [currentDraftMessages, setCurrentDraftMessages] = useState<ChatMessageType[]>([]);
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [availableModels, setAvailableModels] = useState<GeminiModelInfo[]>(getCachedAvailableModels());
+  const [settings, setSettings] = useState<AppSettings>(() => StorageService.getSettings());
+  const [availableModels, setAvailableModels] = useState<GeminiModelInfo[]>(() => getCachedAvailableModels());
   const [loadingSessionIds, setLoadingSessionIds] = useState<Record<string, boolean>>({});
   const [thinkingSessionIds, setThinkingSessionIds] = useState<Record<string, boolean>>({});
   const activeSessionIdRef = useRef<string | null>(activeSessionId);
@@ -103,10 +103,11 @@ export const App: React.FC = () => {
     // Model assignment: sanitize obsolete or non-chat models to active free tier
     if (
       !loadedSettings.selectedModel ||
+      loadedSettings.selectedModel === 'gemini-2.5-flash' ||
       loadedSettings.selectedModel === 'Syntax Onboard Engine' ||
       isForbiddenOrObsoleteModel(loadedSettings.selectedModel)
     ) {
-      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-2.5-flash';
+      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-4-hydrogen';
       StorageService.saveSettings(loadedSettings);
     }
     setSettings(loadedSettings);

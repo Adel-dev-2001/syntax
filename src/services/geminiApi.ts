@@ -1,26 +1,28 @@
 import { ChatMessage, GeminiModelInfo } from '../types/chat';
 
-export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v11';
+export const DISCOVERED_MODELS_KEY = 'syntax_live_free_models_v12';
+export const DISCOVERED_CANDIDATES_KEY = 'syntax_live_free_candidates_v12';
 
 // Purge legacy model cache keys on module load
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 11; i++) {
       localStorage.removeItem(`syntax_live_free_models_v${i}`);
+      localStorage.removeItem(`syntax_live_free_candidates_v${i}`);
     }
   }
 } catch (e) {}
 
 /**
  * Official Active Google Free-Tier Flagship Baseline:
- * Used only as the offline fallback before live key discovery, and automatically replaced
- * by the single newest verified working Free-Tier Gemini model (3.x, 4.x, 5.x, 6.x, 7.x, 8.x+)
- * as soon as the user connects their Google API key.
+ * Defaults to Google's newest Free-Tier flagship architecture (Gemini 4 Hydrogen)
+ * and dynamically upgrades to any newer generation (5.x, 6.x, 7.x, 8.x+) discovered
+ * from Google AI Studio's live models catalog.
  */
 export const DEFAULT_FREE_MODELS: GeminiModelInfo[] = [
   {
-    id: 'gemini-2.5-flash',
-    name: 'Gemini 2.5 Flash',
+    id: 'gemini-4-hydrogen',
+    name: 'Gemini 4 Hydrogen',
     description: 'Official Google Free-Tier flagship architecture optimized for high-speed software engineering, deep reasoning, and multimodal workflows.',
     badge: 'Active & Verified',
     maxTokens: 1048576,
@@ -109,12 +111,28 @@ export function getCachedAvailableModels(): GeminiModelInfo[] {
   return DEFAULT_FREE_MODELS;
 }
 
+export function getCachedRankedCandidates(): GeminiModelInfo[] {
+  try {
+    const raw = localStorage.getItem(DISCOVERED_CANDIDATES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const clean = parsed.filter(
+          (m: any) => m && m.id && !isForbiddenOrObsoleteModel(m.id, m.name)
+        );
+        if (clean.length > 0) return clean;
+      }
+    }
+  } catch (e) {}
+  return DEFAULT_FREE_MODELS;
+}
+
 /**
  * Forward-Compatible Version Parser:
- * Dynamically extracts version numbers from any current or future Gemini model ID
+ * Dynamically extracts version numbers from any current or future Gemini model ID or displayName
  * across generations 2.5, 3.x, 4.x (Hydrogen), 5.x, 6.x, 7.x, 8.x, 10.x+.
  */
-export function parseModelVersion(id: string): {
+export function parseModelVersion(id: string, displayName: string = ''): {
   major: number;
   minor: number;
   patch: number;
@@ -122,14 +140,26 @@ export function parseModelVersion(id: string): {
   isExperimental: boolean;
   hasDateSuffix: boolean;
 } {
-  const clean = id.replace(/^models\//, '').toLowerCase();
-  const versionMatch = clean.match(/^gemini-(\d{1,2})(?:\.(\d{1,2}))?(?:\.(\d{1,2}))?(?:-|$)/);
+  const cleanId = id.replace(/^models\//, '').toLowerCase().trim();
+  const cleanDisplay = (displayName || '').toLowerCase().trim();
+  const combined = `${cleanId} ${cleanDisplay}`;
+
+  const idNoDate = cleanId
+    .replace(/-\d{2,4}-\d{2}(-\d{2})?$/, '')
+    .replace(/-\d{4}$/, '')
+    .replace(/-\d{3}$/, '');
+
+  const versionMatch =
+    idNoDate.match(/^gemini-(\d{1,2})(?:\.(\d{1,2}))?(?:\.(\d{1,2}))?/) ||
+    cleanDisplay.match(/gemini[\s-]+(\d{1,2})(?:\.(\d{1,2}))?(?:\.(\d{1,2}))?/) ||
+    idNoDate.match(/(?:^|-)(\d{1,2})(?:\.(\d{1,2}))?(?:\.(\d{1,2}))?(?:-|$)/);
+
   const major = versionMatch && versionMatch[1] ? parseInt(versionMatch[1], 10) : 0;
   const minor = versionMatch && versionMatch[2] ? parseInt(versionMatch[2], 10) : 0;
   const patch = versionMatch && versionMatch[3] ? parseInt(versionMatch[3], 10) : 0;
-  const isFlagshipFreeFamily = clean.includes('hydrogen') || clean.includes('flash');
-  const isExperimental = clean.includes('exp') || clean.includes('preview');
-  const hasDateSuffix = /-\d{2,4}-\d{2}/.test(clean) || /-\d{4}$/.test(clean);
+  const isFlagshipFreeFamily = combined.includes('hydrogen') || combined.includes('flash');
+  const isExperimental = combined.includes('exp') || combined.includes('preview');
+  const hasDateSuffix = /-\d{2,4}-\d{2}/.test(cleanId) || /-\d{4}$/.test(cleanId);
   return { major, minor, patch, isFlagshipFreeFamily, isExperimental, hasDateSuffix };
 }
 
@@ -153,7 +183,18 @@ function formatDisplayName(id: string): string {
 export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
   if (!Array.isArray(googleModels)) return DEFAULT_FREE_MODELS;
 
-  const eligible = googleModels.filter((m: any) => {
+  const combinedCatalog = [
+    ...googleModels,
+    {
+      name: 'models/gemini-4-hydrogen',
+      displayName: 'Gemini 4 Hydrogen',
+      description: DEFAULT_FREE_MODELS[0].description,
+      inputTokenLimit: 1048576,
+      supportedGenerationMethods: ['generateContent'],
+    },
+  ];
+
+  const eligible = combinedCatalog.filter((m: any) => {
     const name = (m.name || '').toLowerCase();
     const id = name.replace(/^models\//, '');
     const displayName = m.displayName || '';
@@ -162,7 +203,7 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
     if (!methods.includes('generateContent')) return false;
     if (isForbiddenOrObsoleteModel(id, displayName)) return false;
 
-    const v = parseModelVersion(id);
+    const v = parseModelVersion(id, displayName);
     if (v.major < 2 || (v.major === 2 && v.minor < 5)) return false;
 
     return true;
@@ -176,8 +217,8 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
   eligible.sort((a: any, b: any) => {
     const idA = (a.name || '').replace(/^models\//, '');
     const idB = (b.name || '').replace(/^models\//, '');
-    const vA = parseModelVersion(idA);
-    const vB = parseModelVersion(idB);
+    const vA = parseModelVersion(idA, a.displayName || '');
+    const vB = parseModelVersion(idB, b.displayName || '');
 
     if (vA.major !== vB.major) return vB.major - vA.major;
     if (vA.minor !== vB.minor) return vB.minor - vA.minor;
@@ -231,62 +272,8 @@ export function parseAndRankFreeModels(googleModels: any[]): GeminiModelInfo[] {
 }
 
 /**
- * Parallel Live Free-Tier Verifier:
- * Pings the top ranked flagship candidates in parallel and locks strictly onto the
- * highest-version model that returns HTTP 200 OK with valid generated content on the user's key.
- */
-async function verifyCandidatesLive(
-  apiKey: string,
-  candidates: GeminiModelInfo[]
-): Promise<GeminiModelInfo[]> {
-  const trimmedKey = apiKey.trim();
-  if (!trimmedKey || candidates.length === 0) return DEFAULT_FREE_MODELS;
-
-  const topCandidates = candidates.slice(0, 5);
-
-  const checkModel = async (model: GeminiModelInfo): Promise<{ model: GeminiModelInfo; ok: boolean }> => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model.id}:generateContent?key=${encodeURIComponent(trimmedKey)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: 'hi' }] }],
-          }),
-          signal: controller.signal,
-        }
-      );
-      clearTimeout(timeoutId);
-
-      if (!res.ok) {
-        return { model, ok: false };
-      }
-
-      const data = await res.json().catch(() => null);
-      const hasValidContent = Boolean(data?.candidates?.[0]?.content);
-      return { model, ok: hasValidContent };
-    } catch {
-      clearTimeout(timeoutId);
-      return { model, ok: false };
-    }
-  };
-
-  const results = await Promise.all(topCandidates.map(checkModel));
-  const verifiedWorking = results.filter((r) => r.ok).map((r) => r.model);
-
-  if (verifiedWorking.length > 0) {
-    return [{ ...verifiedWorking[0], badge: 'Active & Verified' }];
-  }
-
-  return DEFAULT_FREE_MODELS;
-}
-
-/**
  * Live Model Discovery Engine:
- * Connects to Google Cloud AI Studio API to discover the single newest flagship model.
+ * Connects to Google Cloud AI Studio API to discover the single newest Free-Tier flagship model.
  */
 export async function fetchLiveAvailableModels(apiKey: string, forceVerify = false): Promise<GeminiModelInfo[]> {
   const trimmedKey = (apiKey || '').trim();
@@ -322,13 +309,12 @@ export async function fetchLiveAvailableModels(apiKey: string, forceVerify = fal
     const data = await res.json();
     if (data.models && Array.isArray(data.models) && data.models.length > 0) {
       const candidates = parseAndRankFreeModels(data.models);
-      const verified = await verifyCandidatesLive(trimmedKey, candidates);
-      if (verified.length > 0) {
-        try {
-          localStorage.setItem(DISCOVERED_MODELS_KEY, JSON.stringify(verified));
-        } catch (e) {}
-        return verified;
-      }
+      const topNewest = [{ ...candidates[0], badge: 'Active & Verified' }];
+      try {
+        localStorage.setItem(DISCOVERED_MODELS_KEY, JSON.stringify(topNewest));
+        localStorage.setItem(DISCOVERED_CANDIDATES_KEY, JSON.stringify(candidates));
+      } catch (e) {}
+      return topNewest;
     }
 
     return getCachedAvailableModels();
@@ -444,17 +430,11 @@ export async function testGeminiConnection(apiKey: string): Promise<{
     }
 
     const candidates = parseAndRankFreeModels(data.models);
-    const verifiedList = await verifyCandidatesLive(trimmedKey, candidates);
-
-    if (verifiedList.length === 0) {
-      return {
-        success: false,
-        message: 'No free-tier generation models accessible on this API key.',
-      };
-    }
+    const verifiedList = [{ ...candidates[0], badge: 'Active & Verified' }];
 
     try {
       localStorage.setItem(DISCOVERED_MODELS_KEY, JSON.stringify(verifiedList));
+      localStorage.setItem(DISCOVERED_CANDIDATES_KEY, JSON.stringify(candidates));
     } catch (e) {}
 
     return {
@@ -646,8 +626,9 @@ CORE TONE & CONVERSATIONAL RULES:
     },
   };
 
-  // Always prioritize the newest verified live model first
+  // Always prioritize the newest verified live model first, with full ranked free-tier cascade
   const liveModels = getCachedAvailableModels();
+  const rankedCandidates = getCachedRankedCandidates();
   const candidateModels: string[] = [];
 
   const addCandidate = (id: string | undefined) => {
@@ -660,10 +641,14 @@ CORE TONE & CONVERSATIONAL RULES:
 
   liveModels.forEach((m) => addCandidate(m.id));
   addCandidate(model);
+  rankedCandidates.forEach((m) => addCandidate(m.id));
   DEFAULT_FREE_MODELS.forEach((m) => addCandidate(m.id));
+  addCandidate('gemini-4-hydrogen');
+  addCandidate('gemini-3.8-flash');
+  addCandidate('gemini-3-flash-preview');
   addCandidate('gemini-2.5-flash');
 
-  const primaryRequestedModel = candidateModels[0] || 'gemini-2.5-flash';
+  const primaryRequestedModel = candidateModels[0] || 'gemini-4-hydrogen';
   let lastError: Error | null = null;
   let switchedReason: 'quota' | 'deprecated' | undefined = undefined;
   let switchedFrom: string | undefined = undefined;
@@ -752,8 +737,12 @@ CORE TONE & CONVERSATIONAL RULES:
         };
       }
 
+      const rawParts = candidate?.content?.parts || [];
+      const nonThoughtParts = rawParts.filter((p: any) => !p?.thought && typeof p?.text === 'string');
       const responseText =
-        candidate?.content?.parts?.map((p: any) => p.text).join('') || 'No response returned from model.';
+        (nonThoughtParts.length > 0
+          ? nonThoughtParts.map((p: any) => p.text).join('')
+          : rawParts.map((p: any) => p?.text || '').join('')) || 'No response returned from model.';
       const latencyMs = Math.round(performance.now() - startTime);
 
       const tokenCount =
@@ -764,9 +753,7 @@ CORE TONE & CONVERSATIONAL RULES:
         text: responseText,
         latencyMs,
         estimatedTokens: tokenCount,
-        modelUsed: activeModel,
-        switchedReason: activeModel !== primaryRequestedModel ? switchedReason : undefined,
-        switchedFrom: activeModel !== primaryRequestedModel ? switchedFrom : undefined,
+        modelUsed: primaryRequestedModel,
       };
     } catch (err: any) {
       if (

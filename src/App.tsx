@@ -106,7 +106,7 @@ export const App: React.FC = () => {
       loadedSettings.selectedModel === 'Syntax Onboard Engine' ||
       isForbiddenOrObsoleteModel(loadedSettings.selectedModel)
     ) {
-      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-3.8-flash';
+      loadedSettings.selectedModel = cachedModels[0]?.id || 'gemini-2.5-flash';
       StorageService.saveSettings(loadedSettings);
     }
     setSettings(loadedSettings);

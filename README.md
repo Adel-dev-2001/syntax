@@ -43,11 +43,11 @@ The application runs entirely in the browser without an intermediate backend ser
 
 ## Key Features
 
-### 1. Live Google Gemini API Connection & Dynamic Model Discovery
+### 1. Live Google Gemini API Connection & Flagship Model Discovery
 - **Direct API Integration:** Communicates directly with `https://generativelanguage.googleapis.com/v1beta/models` using the user's Google AI Studio API key.
-- **Forward-Compatible Model Discovery:** Instead of relying only on static model names, Syntax queries the live models endpoint, parses version numbers dynamically (supporting current `2.x` and `3.x` series as well as future model releases), and filters strictly for conversational free-tier models (`flash` and `lite` families) while excluding non-text endpoints (such as image-only, audio, or embedding models).
-- **Live HTTP Verification:** When testing or syncing an API key, the system sends a lightweight verification request (`maxOutputTokens: 1`) to candidate models in parallel and keeps only the models that respond with an active status (`200 OK`).
-- **Real-Time Model Switching & Failover:** Users can switch between verified models directly from the top header bar or the Settings modal. If the active model hits a per-minute rate limit (`HTTP 429`) or becomes unavailable (`HTTP 404`), Syntax automatically falls back to the next verified working model and displays a status notification.
+- **Forward-Compatible Flagship Discovery:** Instead of relying on static model names or mixing weaker model sub-families, Syntax queries the live models endpoint, parses version numbers dynamically (supporting current `2.5` and `3.x` series as well as future model releases), and filters strictly for core flagship Gemini models while excluding cut-down variants (`lite`, `8b`, `nano`) and non-Gemini or non-text endpoints.
+- **Live HTTP Verification:** When testing or syncing an API key, the system sends a lightweight verification request (`maxOutputTokens: 1`) to candidate flagship models in parallel and locks strictly onto the single newest and strongest model that responds with an active status (`200 OK`) on the free tier.
+- **Automatic Resilience & Failover:** If the active flagship model hits a per-minute rate limit (`HTTP 429`) or becomes unavailable (`HTTP 404`), Syntax automatically handles failover and displays a clear status notification.
 
 ### 2. Interactive Code Block & Sandboxed Execution
 - **Code Formatting & Actions:** Renders fenced code blocks with language labels, line numbering support, one-click clipboard copy, and direct source file download.
